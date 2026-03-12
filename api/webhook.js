@@ -14,6 +14,7 @@ const TRANSLATIONS = {
   "english": "ភាសាអង់គ្លេស", "french": "ភាសាបារាំង", "sport": "អប់រំកាយ",
   "pe": "អប់រំកាយ", "ict": "ព័ត៌មានវិទ្យា", "computer": "កុំព្យូទ័រ",
   "technology": "បច្ចេកវិទ្យា", "health": "សុខភាព", "art": "សិល្បៈ", "agriculture": "កសិកម្ម",
+  "skill": "បំណិន",
   
   // បកប្រែពាក្យខាងក្រោមរបាយការណ៍
   "total_score": "ពិន្ទុសរុប", "school_rank": "ចំណាត់ថ្នាក់សាលា",
@@ -350,4 +351,3 @@ async function sendMessage(chatId, text, customKeyboard) {
 function getHeaders() {
   return { "apikey": SUPABASE_SERVICE_KEY, "Authorization": `Bearer ${SUPABASE_SERVICE_KEY}`, "Content-Type": "application/json" };
 }
-
