@@ -8,11 +8,8 @@ const ADMIN_GROUP_ID = "-1003828714540";
 const SUPABASE_URL = "https://bcezphbxnimyhtylkvrx.supabase.co";
 const SUPABASE_SERVICE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJjZXpwaGJ4bmlteWh0eWxrdnJ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4OTA2ODYsImV4cCI6MjA4ODQ2NjY4Nn0.lFzwMvdmyRXfWq1ZbJVoM6EwkLeJXXuoVGoHGjukRQc";
 
-// 📅 កំណត់ឆ្នាំសិក្សាបច្ចុប្បន្ន
 const CURRENT_ACADEMIC_YEAR = "2025-2026";
 
-// 📚 វចនានុក្រមបកប្រែមុខវិជ្ជាពីអង់គ្លេស (ឈ្មោះ Column) ទៅជាខ្មែរ
-// បញ្ជាក់៖ ឈ្មោះអង់គ្លេសខាងឆ្វេង ត្រូវតែជាអក្សរតូចទាំងអស់ (lowercase)
 const SUBJECT_TRANSLATIONS = {
   "khmer": "ភាសាខ្មែរ",
   "math": "គណិតវិទ្យា",
@@ -47,8 +44,8 @@ export default async function handler(req, res) {
 
   try {
     const update = req.body;
+    console.log("📥 ទទួលបានទិន្នន័យពី Telegram:", JSON.stringify(update)); // ជំនួយការឆែកកំហុស
 
-    // ១. ពេលចុចលើប៊ូតុង Inline (រើសខែ ឬ ឆមាស)
     if (update.callback_query) {
       const cb = update.callback_query;
       const chatId = cb.message.chat.id;
@@ -63,13 +60,11 @@ export default async function handler(req, res) {
       return res.status(200).json({ status: 'ok' });
     }
 
-    // ២. ពេលមានសារធម្មតា ឬ ចុចម៉ឺនុយ
     if (update.message) {
       const msg = update.message;
       const chatId = msg.chat.id;
       const text = msg.text || "";
 
-      // មុខងារ Admin Reply ពីក្នុង Group
       if (String(chatId) === String(ADMIN_GROUP_ID)) {
         if (msg.reply_to_message && msg.reply_to_message.from.is_bot) {
           const originalText = msg.reply_to_message.text;
@@ -81,7 +76,6 @@ export default async function handler(req, res) {
         return res.status(200).json({ status: 'ok' }); 
       }
 
-      // ពេលចុច Link ភ្ជាប់ពីវេបសាយ (/start parent_12345)
       if (text.startsWith("/start")) {
         const parts = text.split(" ");
         if (parts.length > 1) {
@@ -99,12 +93,11 @@ export default async function handler(req, res) {
             }
           }
         } else {
-          await sendMessage(chatId, "👋 សូមស្វាគមន៍មកកាន់ប្រព័ន្ធព័ត៌មានវិទ្យាល័យ ហ៊ុន សែន កំពង់ត្រឡាច។", getMainKeyboard());
+          await sendMessage(chatId, "👋 សូមស្វាគមន៍មកកាន់ប្រព័ន្ធព័ត៌មានវិទ្យាល័យ ហ៊ុន សែន កំពង់ត្រឡាច។\n\nសូមប្រើប្រាស់ម៉ឺនុយខាងក្រោមដើម្បីស្វែងរកព័ត៌មាន។", getMainKeyboard());
         }
         return res.status(200).json({ status: 'ok' });
       }
 
-      // ម៉ឺនុយ "📊 មើលលទ្ធផលសិក្សា"
       if (text === "📊 មើលលទ្ធផលសិក្សា") {
         const studentIds = await getLinkedStudentIds(chatId);
         if (studentIds.length > 0) {
@@ -117,36 +110,32 @@ export default async function handler(req, res) {
         return res.status(200).json({ status: 'ok' });
       }
 
-      // ម៉ឺនុយ "🔗 បណ្ដាញទំនាក់ទំនង និង ឯកសារ"
       if (text === "🔗 បណ្ដាញទំនាក់ទំនង និង ឯកសារ") {
         await sendLinksMenu(chatId);
         return res.status(200).json({ status: 'ok' });
       }
       
-      // ម៉ឺនុយ "📩 រាយការណ៍ ឬប្ដឹងតវ៉ា"
       if (text === "📩 រាយការណ៍ ឬប្ដឹងតវ៉ា") {
         await sendMessage(chatId, "✍️ <b>សូមសរសេរសាររបស់អ្នកនៅខាងក្រោម៖</b>\n\nរាល់សារដែលអ្នកផ្ញើមកបន្ទាប់ពីនេះ នឹងត្រូវបញ្ជូនទៅគណៈគ្រប់គ្រងសាលាដោយផ្ទាល់។");
         return res.status(200).json({ status: 'ok' });
       }
 
-      // Forward សារទៅ Admin
-      const userName = msg.from.first_name || 'មិនស្គាល់ឈ្មោះ';
-      const userMessage = `📩 <b>សាររាយការណ៍ថ្មី!</b>\n👤 ពីអ្នក: ${userName}\n🆔 ID: ${chatId}\n\n📝 <b>ខ្លឹមសារ៖</b>\n${text}\n\n<i>(សូម Reply លើសារនេះ ដើម្បីតបទៅគាត់វិញ)</i>`;
-      await sendMessage(ADMIN_GROUP_ID, userMessage);
-      await sendMessage(chatId, "✅ សាររបស់អ្នកត្រូវបានបញ្ជូនទៅកាន់សាលារៀនរួចរាល់។ សូមរង់ចាំការឆ្លើយតប... ⏳");
+      // Forward សារទៅ Admin ប្រសិនបើមិនមែនជាពាក្យបញ្ជា
+      if(text !== "/start" && !text.includes("មើលលទ្ធផលសិក្សា") && !text.includes("បណ្ដាញទំនាក់ទំនង") && !text.includes("រាយការណ៍")) {
+          const userName = msg.from.first_name || 'មិនស្គាល់ឈ្មោះ';
+          const userMessage = `📩 <b>សាររាយការណ៍ថ្មី!</b>\n👤 ពីអ្នក: ${userName}\n🆔 ID: ${chatId}\n\n📝 <b>ខ្លឹមសារ៖</b>\n${text}\n\n<i>(សូម Reply លើសារនេះ ដើម្បីតបទៅគាត់វិញ)</i>`;
+          await sendMessage(ADMIN_GROUP_ID, userMessage);
+          await sendMessage(chatId, "✅ សាររបស់អ្នកត្រូវបានបញ្ជូនទៅកាន់សាលារៀនរួចរាល់។ សូមរង់ចាំការឆ្លើយតប... ⏳");
+      }
     }
     
     return res.status(200).json({ status: 'ok' });
 
   } catch (error) {
-    console.error("Error:", error);
+    console.error("❌ បញ្ហា Server:", error);
     return res.status(500).json({ error: 'Server Error' });
   }
 }
-
-// ==========================================
-// 📊 មុខងារទាញ និង រៀបចំពិន្ទុ (ជាមួយក្បាលតារាងភាសាខ្មែរ)
-// ==========================================
 
 async function handleScoreRequest(chatId, actionData) {
   const parts = actionData.split("_");
@@ -162,70 +151,62 @@ async function handleScoreRequest(chatId, actionData) {
 
   const queryUrl = `${SUPABASE_URL}/rest/v1/${tableName}?student_id=eq.${studentId}&academic_year=eq.${CURRENT_ACADEMIC_YEAR}&order=id.desc`;
   
-  const res = await fetch(queryUrl, { 
-    headers: { "apikey": SUPABASE_SERVICE_KEY, "Authorization": `Bearer ${SUPABASE_SERVICE_KEY}` }
-  });
-  const data = await res.json() || [];
+  try {
+      const res = await fetch(queryUrl, { 
+        headers: { "apikey": SUPABASE_SERVICE_KEY, "Authorization": `Bearer ${SUPABASE_SERVICE_KEY}` }
+      });
+      const data = await res.json() || [];
 
-  if (data.length === 0) {
-    await sendMessage(chatId, `📌 មិនទាន់មានលទ្ធផល <b>${title}</b> សម្រាប់អត្តលេខ <b>${studentId}</b> ក្នុងឆ្នាំសិក្សា ${CURRENT_ACADEMIC_YEAR} នៅឡើយទេ។\n<i>(បញ្ជាក់៖ គ្មានទិន្នន័យ)</i>`);
-    return;
-  }
+      if (data.length === 0) {
+        await sendMessage(chatId, `📌 មិនទាន់មានលទ្ធផល <b>${title}</b> សម្រាប់អត្តលេខ <b>${studentId}</b> ក្នុងឆ្នាំសិក្សា ${CURRENT_ACADEMIC_YEAR} នៅឡើយទេ។\n<i>(បញ្ជាក់៖ គ្មានទិន្នន័យ)</i>`);
+        return;
+      }
 
-  const latestData = data[0]; // យកទិន្នន័យចុងក្រោយបំផុត
-  
-  // រៀបចំ Header ព័ត៌មានសិស្ស
-  let msg = `🎓 <b>ព័ត៌មានសិស្ស (${CURRENT_ACADEMIC_YEAR})</b>\n`;
-  msg += `• អត្តលេខ៖ <b>${studentId}</b>\n`;
-  msg += `• ឈ្មោះ៖ <b>${latestData.student_name || '-'}</b>\n`;
-  msg += `• ភេទ៖ ${latestData.gender || '-'}\n`;
-  if(latestData.dob) msg += `• ថ្ងៃខែឆ្នាំកំណើត៖ ${latestData.dob}\n`;
-  msg += `• ថ្នាក់ទី៖ <b>${latestData.grade || '-'}</b>\n\n`;
-
-  // កំណត់ឈ្មោះខែ ឬ ឈ្មោះឆមាស
-  const periodName = latestData.month_name || latestData.semester_name || 'សរុប';
-  msg += `📊 <b>${title} (${periodName})</b>\n`;
-  msg += `-----------------------------------\n`;
-
-  // បញ្ជីឈ្មោះ Column មិនមែនមុខវិជ្ជា ដែលត្រូវមើលរំលង
-  const excludeColumns = [
-    "id", "student_id", "student_name", "gender", "dob", "grade", 
-    "month_name", "semester_name", "class_rank", "average", 
-    "grade_result", "academic_year", "created_at"
-  ];
-  
-  let hasSubjects = false;
-  for (const [key, value] of Object.entries(latestData)) {
-    const normalizedKey = key.toLowerCase();
-    
-    // បើ Column នោះមិនមែនជាទិន្នន័យទូទៅ និងមានពិន្ទុ
-    if (!excludeColumns.includes(normalizedKey) && value !== null && value !== "") {
+      const latestData = data[0]; 
       
-      // ទាញយកឈ្មោះភាសាខ្មែរពីវចនានុក្រម។ បើរកមិនឃើញ វាប្រើឈ្មោះដើមដែលផ្តើមដោយអក្សរធំ
-      let subjectNameInKhmer = SUBJECT_TRANSLATIONS[normalizedKey] || (key.charAt(0).toUpperCase() + key.slice(1));
+      let msg = `🎓 <b>ព័ត៌មានសិស្ស (${CURRENT_ACADEMIC_YEAR})</b>\n`;
+      msg += `• អត្តលេខ៖ <b>${studentId}</b>\n`;
+      msg += `• ឈ្មោះ៖ <b>${latestData.student_name || '-'}</b>\n`;
+      msg += `• ភេទ៖ ${latestData.gender || '-'}\n`;
+      if(latestData.dob) msg += `• ថ្ងៃខែឆ្នាំកំណើត៖ ${latestData.dob}\n`;
+      msg += `• ថ្នាក់ទី៖ <b>${latestData.grade || '-'}</b>\n\n`;
+
+      const periodName = latestData.month_name || latestData.semester_name || 'សរុប';
+      msg += `📊 <b>${title} (${periodName})</b>\n`;
+      msg += `-----------------------------------\n`;
+
+      const excludeColumns = [
+        "id", "student_id", "student_name", "gender", "dob", "grade", 
+        "month_name", "semester_name", "class_rank", "average", 
+        "grade_result", "academic_year", "created_at"
+      ];
       
-      msg += `🔹 ${subjectNameInKhmer} : <b>${value}</b>\n`;
-      hasSubjects = true;
-    }
+      let hasSubjects = false;
+      for (const [key, value] of Object.entries(latestData)) {
+        const normalizedKey = key.toLowerCase();
+        
+        if (!excludeColumns.includes(normalizedKey) && value !== null && value !== "") {
+          let subjectNameInKhmer = SUBJECT_TRANSLATIONS[normalizedKey] || (key.charAt(0).toUpperCase() + key.slice(1));
+          msg += `🔹 ${subjectNameInKhmer} : <b>${value}</b>\n`;
+          hasSubjects = true;
+        }
+      }
+
+      if (!hasSubjects) msg += `<i>មិនទាន់មានពិន្ទុមុខវិជ្ជាលម្អិតទេ</i>\n`;
+
+      msg += `-----------------------------------\n`;
+      
+      msg += `📈 <b>របាយការណ៍សរុប៖</b>\n`;
+      msg += `• មធ្យមភាគ៖ <b>${latestData.average || '-'}</b>\n`;
+      msg += `• ចំណាត់ថ្នាក់ទី៖ <b>${latestData.class_rank || '-'}</b>\n`;
+      msg += `• និទ្ទេស/លទ្ធផល៖ <b>${latestData.grade_result || '-'}</b>\n`;
+
+      await sendMessage(chatId, msg);
+  } catch (err) {
+      console.error("Error fetching score:", err);
+      await sendMessage(chatId, "❌ មានបញ្ហាក្នុងការទាញយកពិន្ទុពីប្រព័ន្ធ។ សូមព្យាយាមម្តងទៀត។");
   }
-
-  if (!hasSubjects) msg += `<i>មិនទាន់មានពិន្ទុមុខវិជ្ជាលម្អិតទេ</i>\n`;
-
-  msg += `-----------------------------------\n`;
-  
-  // របាយការណ៍សរុប
-  msg += `📈 <b>របាយការណ៍សរុប៖</b>\n`;
-  msg += `• មធ្យមភាគ៖ <b>${latestData.average || '-'}</b>\n`;
-  msg += `• ចំណាត់ថ្នាក់ទី៖ <b>${latestData.class_rank || '-'}</b>\n`;
-  msg += `• និទ្ទេស/លទ្ធផល៖ <b>${latestData.grade_result || '-'}</b>\n`;
-
-  await sendMessage(chatId, msg);
 }
-
-
-// ==========================================
-// 🗄️ មុខងារភ្ជាប់ Supabase និង Helper Functions
-// ==========================================
 
 async function getLinkedStudentIds(chatId) {
   const headers = { "apikey": SUPABASE_SERVICE_KEY, "Authorization": `Bearer ${SUPABASE_SERVICE_KEY}` };
@@ -271,10 +252,6 @@ async function saveTelegramIdToSupabase(chatId, studentId, role) {
   } catch (err) { return "ERROR"; }
 }
 
-// ==========================================
-// 📱 មុខងារ UI និង Keyboard
-// ==========================================
-
 async function sendScoreMenu(chatId, studentId) {
   const text = `🎯 <b>សូមជ្រើសរើសប្រភេទពិន្ទុ</b>\n(អត្តលេខ៖ ${studentId} | ឆ្នាំសិក្សា៖ ${CURRENT_ACADEMIC_YEAR})`;
   
@@ -317,12 +294,31 @@ async function sendLinksMenu(chatId) {
   await sendMessage(chatId, "🌐 <b>សូមជ្រើសរើសតំណភ្ជាប់ខាងក្រោម៖</b>", inlineKeyboard);
 }
 
+// 🛠️ ចំណុចដែលបានកែសម្រួល (Fixed Bug)
 async function sendMessage(chatId, text, customKeyboard) {
-  const payload = { "chat_id": chatId, "text": text, "parse_mode": "HTML", "disable_web_page_preview": true };
-  if (customKeyboard) payload.reply_markup = JSON.stringify(customKeyboard);
+  const payload = { 
+    chat_id: chatId, 
+    text: text, 
+    parse_mode: "HTML", 
+    disable_web_page_preview: true 
+  };
+  
+  // បញ្ចូល Keyboard ដោយមិនបាច់បម្លែងជា String តាំងពីដំបូង (ការពារ Error ពី Telegram)
+  if (customKeyboard) {
+    payload.reply_markup = customKeyboard; 
+  }
+
   try { 
-    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, { 
-      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) 
+    const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, { 
+      method: "POST", 
+      headers: { "Content-Type": "application/json" }, 
+      body: JSON.stringify(payload) // បម្លែងជា String តែម្តងនៅពេលផ្ញើ
     }); 
-  } catch (err) { console.error(err); }
+    const responseData = await res.json();
+    if (!responseData.ok) {
+        console.error("❌ Telegram API Error:", responseData);
+    }
+  } catch (err) { 
+      console.error("❌ Fetch Error:", err); 
+  }
 }
