@@ -3,7 +3,7 @@ const ADMIN_GROUP_ID = "-1003828714540";
 const SUPABASE_URL = "https://bcezphbxnimyhtylkvrx.supabase.co";
 const SUPABASE_SERVICE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJjZXpwaGJ4bmlteWh0eWxrdnJ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4OTA2ODYsImV4cCI6MjA4ODQ2NjY4Nn0.lFzwMvdmyRXfWq1ZbJVoM6EwkLeJXXuoVGoHGjukRQc";
 
-const CURRENT_ACADEMIC_YEAR = "2025-2026";
+const CURRENT_ACADEMIC_YEAR = "២០២៥-២០២៦";
 
 // បកប្រែមុខវិជ្ជា និងចំណុចផ្សេងៗ
 const TRANSLATIONS = {
@@ -350,3 +350,4 @@ async function sendMessage(chatId, text, customKeyboard) {
 function getHeaders() {
   return { "apikey": SUPABASE_SERVICE_KEY, "Authorization": `Bearer ${SUPABASE_SERVICE_KEY}`, "Content-Type": "application/json" };
 }
+
