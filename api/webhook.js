@@ -1,4 +1,4 @@
-const BOT_TOKEN = "8698376263:AAHSbkVz6VLe8rw9Q1nia1O-bzjJuY8UD9w";
+const BOT_TOKEN = "8698376263:AAFZrgpSJ81LeiyBCDK6K_OKN2ZvwCqyzbg";
 const ADMIN_GROUP_ID = "-1003828714540"; 
 const SUPABASE_URL = "https://bcezphbxnimyhtylkvrx.supabase.co";
 const SUPABASE_SERVICE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJjZXpwaGJ4bmlteWh0eWxrdnJ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4OTA2ODYsImV4cCI6MjA4ODQ2NjY4Nn0.lFzwMvdmyRXfWq1ZbJVoM6EwkLeJXXuoVGoHGjukRQc";
@@ -265,3 +265,4 @@ async function sendMessage(chatId, text, customKeyboard) {
     }); 
   } catch (err) { console.error("Error sending message:", err); }
 }
+
