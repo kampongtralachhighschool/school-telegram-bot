@@ -3,7 +3,8 @@ const ADMIN_GROUP_ID = "-1003828714540";
 const SUPABASE_URL = "https://bcezphbxnimyhtylkvrx.supabase.co";
 const SUPABASE_SERVICE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJjZXpwaGJ4bmlteWh0eWxrdnJ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4OTA2ODYsImV4cCI6MjA4ODQ2NjY4Nn0.lFzwMvdmyRXfWq1ZbJVoM6EwkLeJXXuoVGoHGjukRQc";
 
-const CURRENT_ACADEMIC_YEAR = "២០២៥-២០២៦";
+// យើងលែង Hardcode ឆ្នាំសិក្សាទៀតហើយ តែដាក់ឆ្នាំ Default មួយក្រែងលោសិស្សអត់ទាន់មាន Profile
+const DEFAULT_ACADEMIC_YEAR = "2025-2026";
 
 // បកប្រែមុខវិជ្ជា និងចំណុចផ្សេងៗ
 const TRANSLATIONS = {
@@ -80,7 +81,12 @@ module.exports = async function (req, res) {
             const role = payload[0];
             const studentId = payload[1];
             await saveTelegramIdToSupabase(chatId, studentId, role);
-            await sendMessage(chatId, `✅ គណនីរបស់អ្នកបានភ្ជាប់ជាមួយអត្តលេខ <b>${studentId}</b> រួចរាល់។`, getMainKeyboard());
+            
+            // ទាញយកឈ្មោះពី Profile មកបង្ហាញពេលភ្ជាប់ជោគជ័យ
+            const profile = await getStudentProfile(studentId);
+            const stuName = profile ? profile.student_name : studentId;
+            
+            await sendMessage(chatId, `✅ គណនីរបស់អ្នកបានភ្ជាប់ជាមួយសិស្សឈ្មោះ <b>${stuName}</b> (អត្តលេខ៖ ${studentId}) រួចរាល់។`, getMainKeyboard());
             await sendScoreMenu(chatId, studentId);
           }
         } else {
@@ -127,18 +133,32 @@ module.exports = async function (req, res) {
 // អនុគមន៍ជំនួយ (Helper Functions)
 // ==========================================
 
+// ថ្មី៖ ទាញយកប្រវត្តិរូបសិស្សពី Table: student_profile
+async function getStudentProfile(studentId) {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/student_profile?student_id=eq.${studentId}&order=id.desc&limit=1`, { headers: getHeaders() });
+    const data = await res.json();
+    if (data && data.length > 0) return data[0];
+  } catch (err) {}
+  return null;
+}
+
 async function handleCallbackQuery(chatId, actionData) {
   const parts = actionData.split("_");
   const action = parts[0]; 
   const studentId = parts[1];
 
+  // ទាញយកឆ្នាំសិក្សាបច្ចុប្បន្នរបស់សិស្សពី Profile
+  const profile = await getStudentProfile(studentId);
+  const activeYear = (profile && profile.academic_year) ? profile.academic_year : DEFAULT_ACADEMIC_YEAR;
+
   // បង្ហាញបញ្ជីខែទាំងអស់
   if (action === "LISTMONTHS") {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/student_scores?student_id=eq.${studentId}&academic_year=eq.${CURRENT_ACADEMIC_YEAR}&select=month_name&order=id.desc`, { headers: getHeaders() });
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/student_scores?student_id=eq.${studentId}&academic_year=eq.${activeYear}&select=month_name&order=id.desc`, { headers: getHeaders() });
     const data = await res.json() || [];
     const months = [...new Set(data.map(r => r.month_name))].filter(Boolean);
     
-    if (months.length === 0) return sendMessage(chatId, `📌 មិនទាន់មានពិន្ទុសម្រាប់អត្តលេខ <b>${studentId}</b> ទេ។`);
+    if (months.length === 0) return sendMessage(chatId, `📌 មិនទាន់មានពិន្ទុសម្រាប់ឆ្នាំសិក្សា <b>${activeYear}</b> ទេ។`);
     
     let buttons = [];
     months.forEach(m => buttons.push([{"text": `📅 ខែ ${m}`, "callback_data": `SHOWMONTH_${studentId}_${m}`}]));
@@ -148,16 +168,16 @@ async function handleCallbackQuery(chatId, actionData) {
   // បង្ហាញពិន្ទុខែណាមួយ
   else if (action === "SHOWMONTH") {
     const monthName = parts[2];
-    await displayScore(chatId, studentId, "student_scores", "ពិន្ទុប្រចាំខែ", "month_name", monthName);
+    await displayScore(chatId, studentId, "student_scores", "ពិន្ទុប្រចាំខែ", "month_name", monthName, profile, activeYear);
   }
 
   // បង្ហាញបញ្ជីឆមាសទាំងអស់
   else if (action === "LISTSEMS") {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/semester_scores?student_id=eq.${studentId}&academic_year=eq.${CURRENT_ACADEMIC_YEAR}&select=semester_name&order=id.desc`, { headers: getHeaders() });
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/semester_scores?student_id=eq.${studentId}&academic_year=eq.${activeYear}&select=semester_name&order=id.desc`, { headers: getHeaders() });
     const data = await res.json() || [];
     const sems = [...new Set(data.map(r => r.semester_name))].filter(Boolean);
     
-    if (sems.length === 0) return sendMessage(chatId, `📌 មិនទាន់មានពិន្ទុឆមាសសម្រាប់អត្តលេខ <b>${studentId}</b> ទេ។`);
+    if (sems.length === 0) return sendMessage(chatId, `📌 មិនទាន់មានពិន្ទុឆមាសសម្រាប់ឆ្នាំសិក្សា <b>${activeYear}</b> ទេ។`);
     
     let buttons = [];
     sems.forEach(s => buttons.push([{"text": `🌓 ${s}`, "callback_data": `SHOWSEM_${studentId}_${s}`}]));
@@ -167,17 +187,17 @@ async function handleCallbackQuery(chatId, actionData) {
   // បង្ហាញពិន្ទុឆមាសណាមួយ
   else if (action === "SHOWSEM") {
     const semName = parts[2];
-    await displayScore(chatId, studentId, "semester_scores", "ពិន្ទុប្រចាំឆមាស", "semester_name", semName);
+    await displayScore(chatId, studentId, "semester_scores", "ពិន្ទុប្រចាំឆមាស", "semester_name", semName, profile, activeYear);
   }
 
   // បង្ហាញពិន្ទុប្រចាំឆ្នាំ
   else if (action === "YEAR") {
-    await displayScore(chatId, studentId, "year_scores", "លទ្ធផលប្រចាំឆ្នាំ", null, null);
+    await displayScore(chatId, studentId, "year_scores", "លទ្ធផលប្រចាំឆ្នាំ", null, null, profile, activeYear);
   }
 }
 
-async function displayScore(chatId, studentId, tableName, title, periodCol, periodName) {
-  let queryUrl = `${SUPABASE_URL}/rest/v1/${tableName}?student_id=eq.${studentId}&academic_year=eq.${CURRENT_ACADEMIC_YEAR}`;
+async function displayScore(chatId, studentId, tableName, title, periodCol, periodName, profile, activeYear) {
+  let queryUrl = `${SUPABASE_URL}/rest/v1/${tableName}?student_id=eq.${studentId}&academic_year=eq.${activeYear}`;
   if (periodCol && periodName) queryUrl += `&${periodCol}=eq.${encodeURIComponent(periodName)}`;
   queryUrl += `&order=id.desc&limit=1`;
 
@@ -191,30 +211,41 @@ async function displayScore(chatId, studentId, tableName, title, periodCol, peri
 
       const latestData = data[0]; 
       
-      // ព្យាយាមទាញយក max_scores ដើម្បីគិតនិទ្ទេស
+      // ទាញយកពិន្ទុអតិបរមា (Max Scores) ដោយប្រើប្រាស់ Grade Level និង Class Type ពី Profile ផ្ទាល់
       let maxScores = {};
       try {
-        let gradeLvl = 10, classType = 'General';
-        const gStr = String(latestData.grade || "").toUpperCase();
-        const m = gStr.match(/\d+/);
-        if (m) gradeLvl = parseInt(m[0]);
-        if (gradeLvl >= 11) {
-            if (gStr.includes("SC") || gStr.includes("វិទ្យាសាស្ត្រ") && !gStr.includes("សង្គម")) classType = "SC";
-            else if (gStr.includes("SS") || gStr.includes("សង្គម")) classType = "SS";
-            else classType = "SC"; // Default
+        let gradeLvl = profile ? profile.grade_level : 10;
+        let classType = profile ? profile.class_type : 'General';
+        
+        // បើអត់មាន Profile, ព្យាយាមស្មានពីទិន្នន័យចាស់ (Fallback)
+        if (!profile && latestData.grade) {
+            const gStr = String(latestData.grade || "").toUpperCase();
+            const m = gStr.match(/\d+/);
+            if (m) gradeLvl = parseInt(m[0]);
+            if (gradeLvl >= 11) {
+                if (gStr.includes("SS") || gStr.includes("សង្គម")) classType = "SS";
+                else classType = "SC";
+            }
         }
+
         const maxRes = await fetch(`${SUPABASE_URL}/rest/v1/max_scores?grade_level=eq.${gradeLvl}&class_type=eq.${classType}`, { headers: getHeaders() });
         const maxData = await maxRes.json();
         if (maxData && maxData.length > 0) maxScores = maxData[0];
-      } catch (err) { /* បើអត់ទាន់មានតារាង max_scores វានឹងរំលង */ }
+      } catch (err) { }
 
       const actualPeriodName = periodName || 'សរុប';
-      let msg = `🎓 <b>ព័ត៌មានសិស្ស (${CURRENT_ACADEMIC_YEAR})</b>\n`;
+      
+      // ប្រើប្រាស់ទិន្នន័យពី Profile ដើម្បីបង្ហាញឲ្យច្បាស់លាស់
+      let msg = `🎓 <b>ព័ត៌មានសិស្ស (${activeYear})</b>\n`;
       msg += `• អត្តលេខ៖ <b>${studentId}</b>\n`;
-      msg += `• ឈ្មោះ៖ <b>${latestData.student_name || '-'}</b>\n`;
-      msg += `• ភេទ៖ ${latestData.gender || '-'}\n`;
-      if(latestData.dob) msg += `• ថ្ងៃខែឆ្នាំកំណើត៖ ${latestData.dob}\n`;
-      msg += `• ថ្នាក់ទី៖ <b>${latestData.grade || '-'}</b>\n\n`;
+      msg += `• ឈ្មោះ៖ <b>${profile ? profile.student_name : (latestData.student_name || '-')}</b>\n`;
+      msg += `• ភេទ៖ ${profile ? profile.gender : (latestData.gender || '-')}\n`;
+      
+      const pDob = profile ? profile.dob : latestData.dob;
+      if(pDob) msg += `• ថ្ងៃខែឆ្នាំកំណើត៖ ${pDob}\n`;
+      
+      const pClass = profile ? profile.class_name : latestData.grade;
+      msg += `• ថ្នាក់ទី៖ <b>${pClass || '-'}</b>\n\n`;
 
       msg += `📊 <b>${title} (${actualPeriodName})</b>\n`;
       msg += `-----------------------------------\n`;
@@ -305,13 +336,16 @@ async function saveTelegramIdToSupabase(chatId, studentId, role) {
 
 // ម៉ឺនុយជ្រើសរើសប្រភេទពិន្ទុ
 async function sendScoreMenu(chatId, studentId) {
+  const profile = await getStudentProfile(studentId);
+  const stuName = profile ? profile.student_name : studentId;
+  
   const inlineKeyboard = {
     "inline_keyboard": [
       [{"text": "📅 ប្រចាំខែ", "callback_data": `LISTMONTHS_${studentId}`}, {"text": "🌓 ប្រចាំឆមាស", "callback_data": `LISTSEMS_${studentId}`}],
       [{"text": "🏆 ប្រចាំឆ្នាំ", "callback_data": `YEAR_${studentId}`}]
     ]
   };
-  await sendMessage(chatId, `🎯 <b>សូមជ្រើសរើសប្រភេទពិន្ទុ</b>\n(អត្តលេខ៖ ${studentId})`, inlineKeyboard);
+  await sendMessage(chatId, `🎯 <b>សូមជ្រើសរើសប្រភេទពិន្ទុ</b>\n(សិស្ស៖ ${stuName})`, inlineKeyboard);
 }
 
 // ម៉ឺនុយ Link សំខាន់ៗ (ថ្មី)
