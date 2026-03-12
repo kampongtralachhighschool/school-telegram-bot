@@ -1,42 +1,54 @@
-const BOT_TOKEN = "8698376263:AAFZrgpSJ81LeiyBCDK6K_OKN2ZvwCqyzbg";
+const BOT_TOKEN = "8698376263:AAFZrgpSJ81LeiyBCDK6K_OKN2ZvwCqyzbg"; // Token ថ្មី
 const ADMIN_GROUP_ID = "-1003828714540"; 
 const SUPABASE_URL = "https://bcezphbxnimyhtylkvrx.supabase.co";
 const SUPABASE_SERVICE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJjZXpwaGJ4bmlteWh0eWxrdnJ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4OTA2ODYsImV4cCI6MjA4ODQ2NjY4Nn0.lFzwMvdmyRXfWq1ZbJVoM6EwkLeJXXuoVGoHGjukRQc";
 
-const CURRENT_ACADEMIC_YEAR = "២០២៥-២០២៦";
+const CURRENT_ACADEMIC_YEAR = "2025-2026";
 
-const SUBJECT_TRANSLATIONS = {
+// បកប្រែមុខវិជ្ជា និងចំណុចផ្សេងៗ
+const TRANSLATIONS = {
   "khmer": "ភាសាខ្មែរ", "math": "គណិតវិទ្យា", "mathematics": "គណិតវិទ្យា",
   "physics": "រូបវិទ្យា", "chemistry": "គីមីវិទ្យា", "biology": "ជីវវិទ្យា",
   "earth_science": "ផែនដីវិទ្យា", "earth": "ផែនដីវិទ្យា", "history": "ប្រវត្តិវិទ្យា",
   "geography": "ភូមិវិទ្យា", "morality": "សីលធម៌ ពលរដ្ឋ", "civics": "សីលធម៌ ពលរដ្ឋ",
   "english": "ភាសាអង់គ្លេស", "french": "ភាសាបារាំង", "sport": "អប់រំកាយ",
   "pe": "អប់រំកាយ", "ict": "ព័ត៌មានវិទ្យា", "computer": "កុំព្យូទ័រ",
-  "art": "សិល្បៈ", "drawing": "គំនូរ", "agriculture": "កសិកម្ម",
-  "home_ec": "គេហវិជ្ជា", "home_economics": "គេហវិជ្ជា", "literature": "អក្សរសិល្ប៍",
-  "science": "វិទ្យាសាស្ត្រ", "social_study": "សិក្សាសង្គម"
+  "technology": "បច្ចេកវិទ្យា", "health": "សុខភាព", "art": "សិល្បៈ", "agriculture": "កសិកម្ម",
+  
+  // បកប្រែពាក្យខាងក្រោមរបាយការណ៍
+  "total_score": "ពិន្ទុសរុប", "school_rank": "ចំណាត់ថ្នាក់សាលា",
+  "exam_total_score": "ពិន្ទុប្រឡងសរុប", "exam_average": "មធ្យមភាគប្រឡង", 
+  "exam_rank": "ចំណាត់ថ្នាក់ប្រឡង", "monthly_average": "មធ្យមភាគប្រចាំខែ", 
+  "semester_average": "មធ្យមភាគឆមាស"
 };
 
-// ប្រើ module.exports ជាស្តង់ដារសម្រាប់ Vercel ដែលអត់មាន package.json
+// អ្វីដែលត្រូវលាក់មិនឲ្យបង្ហាញ (កាលបរិច្ឆេទ និង ទិន្នន័យមិនចាំបាច់)
+const EXCLUDE_COLUMNS = [
+  "id", "student_id", "student_name", "gender", "dob", "grade", "month_name", 
+  "semester_name", "class_rank", "average", "grade_result", "academic_year", 
+  "created_at", "updated_at", "date_solar", "date_lunar" // លាក់កាលបរិច្ឆេទ
+];
+
+// ចំណុចដែលត្រូវបង្ហាញនៅខាងក្រោមគេ (Summary)
+const SUMMARY_COLUMNS = [
+  "total_score", "school_rank", "exam_total_score", "exam_average", 
+  "exam_rank", "monthly_average", "semester_average"
+];
+
 module.exports = async function (req, res) {
-  // បើកចូលមើលតាម Browser ធម្មតា
-  if (req.method === 'GET') {
-    return res.status(200).send('✅ School Telegram Bot API is Running!');
-  }
+  if (req.method === 'GET') return res.status(200).send('✅ School Telegram Bot V2 is Running!');
 
   try {
-    // ធានាថាទិន្នន័យត្រូវបាន Parse ត្រឹមត្រូវ
     const update = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-
     if (!update) return res.status(200).json({ status: 'ok' });
 
-    // ១. ពេលចុចលើប៊ូតុង Inline (រើសខែ ឬ ឆមាស)
+    // ពេលចុចប៉ះប៊ូតុង Inline
     if (update.callback_query) {
       const cb = update.callback_query;
       const chatId = cb.message.chat.id;
       const data = cb.data; 
 
-      await handleScoreRequest(chatId, data);
+      await handleCallbackQuery(chatId, data);
       
       await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/answerCallbackQuery`, {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -45,24 +57,20 @@ module.exports = async function (req, res) {
       return res.status(200).json({ status: 'ok' });
     }
 
-    // ២. ពេលមានសារធម្មតា ឬ ចុចម៉ឺនុយ
+    // ពេលផ្ញើសារធម្មតា
     if (update.message) {
       const msg = update.message;
       const chatId = msg.chat.id;
       const text = msg.text || "";
 
-      // មុខងារ Admin Reply
       if (String(chatId) === String(ADMIN_GROUP_ID)) {
         if (msg.reply_to_message && msg.reply_to_message.from.is_bot) {
           const match = msg.reply_to_message.text.match(/ID:\s*(\d+)/);
-          if (match && match[1]) {
-            await sendMessage(match[1], `💬 <b>សារតបពីសាលារៀន៖</b>\n\n${text}`);
-          }
+          if (match && match[1]) await sendMessage(match[1], `💬 <b>សារតបពីសាលារៀន៖</b>\n\n${text}`);
         }
         return res.status(200).json({ status: 'ok' }); 
       }
 
-      // សារ /start
       if (text.startsWith("/start")) {
         const parts = text.split(" ");
         if (parts.length > 1) {
@@ -70,16 +78,12 @@ module.exports = async function (req, res) {
           if (payload.length === 2) {
             const role = payload[0];
             const studentId = payload[1];
-            const linkStatus = await saveTelegramIdToSupabase(chatId, studentId, role);
-            if (linkStatus === "NEW_LINK" || linkStatus === "ALREADY_LINKED") {
-              await sendMessage(chatId, `✅ គណនីរបស់អ្នកបានភ្ជាប់ជាមួយអត្តលេខ <b>${studentId}</b> រួចរាល់។`, getMainKeyboard());
-              await sendScoreMenu(chatId, studentId);
-            } else {
-              await sendMessage(chatId, "❌ មានបញ្ហាក្នុងការភ្ជាប់ទិន្នន័យ។");
-            }
+            await saveTelegramIdToSupabase(chatId, studentId, role);
+            await sendMessage(chatId, `✅ គណនីរបស់អ្នកបានភ្ជាប់ជាមួយអត្តលេខ <b>${studentId}</b> រួចរាល់។`, getMainKeyboard());
+            await sendScoreMenu(chatId, studentId);
           }
         } else {
-          await sendMessage(chatId, "👋 <b>សូមស្វាគមន៍មកកាន់ប្រព័ន្ធព័ត៌មានវិទ្យាល័យ ហ៊ុន សែន កំពង់ត្រឡាច។</b>\n\nសូមប្រើប្រាស់ម៉ឺនុយខាងក្រោមដើម្បីស្វែងរកព័ត៌មានដែលអ្នកត្រូវការ។", getMainKeyboard());
+          await sendMessage(chatId, "👋 <b>សូមស្វាគមន៍មកកាន់ប្រព័ន្ធព័ត៌មានវិទ្យាល័យ ហ៊ុន សែន កំពង់ត្រឡាច។</b>\n\nសូមប្រើប្រាស់ម៉ឺនុយខាងក្រោមដើម្បីស្វែងរកព័ត៌មាន។", getMainKeyboard());
         }
         return res.status(200).json({ status: 'ok' });
       }
@@ -87,11 +91,9 @@ module.exports = async function (req, res) {
       if (text === "📊 មើលលទ្ធផលសិក្សា") {
         const studentIds = await getLinkedStudentIds(chatId);
         if (studentIds.length > 0) {
-          for (const sid of studentIds) {
-            await sendScoreMenu(chatId, sid);
-          }
+          for (const sid of studentIds) await sendScoreMenu(chatId, sid);
         } else {
-          await sendMessage(chatId, "⚠️ លោកអ្នកមិនទាន់បានភ្ជាប់អត្តលេខសិស្សនៅឡើយទេ។ សូមភ្ជាប់តាមរយៈគេហទំព័រជាមុនសិន។");
+          await sendMessage(chatId, "⚠️ លោកអ្នកមិនទាន់បានភ្ជាប់អត្តលេខសិស្សនៅឡើយទេ។");
         }
         return res.status(200).json({ status: 'ok' });
       }
@@ -106,22 +108,17 @@ module.exports = async function (req, res) {
         return res.status(200).json({ status: 'ok' });
       }
 
-      // Forward ទៅ Admin (បើមិនមែនជាបញ្ជា)
       if(text !== "" && !text.startsWith("/")) {
           const userName = msg.from.first_name || 'មិនស្គាល់ឈ្មោះ';
-          const userMessage = `📩 <b>សាររាយការណ៍ថ្មី!</b>\n👤 ពីអ្នក: ${userName}\n🆔 ID: ${chatId}\n\n📝 <b>ខ្លឹមសារ៖</b>\n${text}\n\n<i>(សូម Reply លើសារនេះ ដើម្បីតបទៅគាត់វិញ)</i>`;
+          const userMessage = `📩 <b>សាររាយការណ៍ថ្មី!</b>\n👤 ពីអ្នក: ${userName}\n🆔 ID: ${chatId}\n\n📝 <b>ខ្លឹមសារ៖</b>\n${text}\n\n<i>(សូម Reply លើសារនេះ ដើម្បីតប)</i>`;
           await sendMessage(ADMIN_GROUP_ID, userMessage);
-          await sendMessage(chatId, "✅ សាររបស់អ្នកត្រូវបានបញ្ជូនទៅកាន់សាលារៀនរួចរាល់។ សូមរង់ចាំការឆ្លើយតប... ⏳");
+          await sendMessage(chatId, "✅ សាររបស់អ្នកត្រូវបានបញ្ជូនទៅកាន់សាលារៀនរួចរាល់។");
       }
     }
-    
-    // បញ្ចប់ប្រកបដោយសុវត្ថិភាព
     return res.status(200).json({ status: 'ok' });
 
   } catch (error) {
-    console.error("❌ បញ្ហា Server:", error);
-    // តែងតែតប 200 ទៅ Telegram វិញជានិច្ច ដើម្បីកុំឲ្យវាគាំង
-    return res.status(200).json({ status: 'error', message: error.toString() });
+    return res.status(200).json({ status: 'error' });
   }
 };
 
@@ -129,33 +126,88 @@ module.exports = async function (req, res) {
 // អនុគមន៍ជំនួយ (Helper Functions)
 // ==========================================
 
-async function handleScoreRequest(chatId, actionData) {
+async function handleCallbackQuery(chatId, actionData) {
   const parts = actionData.split("_");
-  const type = parts[0]; 
+  const action = parts[0]; 
   const studentId = parts[1];
 
-  let tableName = "";
-  let title = "";
-
-  if (type === "MONTH") { tableName = "student_scores"; title = "ពិន្ទុប្រចាំខែ"; }
-  else if (type === "SEMESTER") { tableName = "semester_scores"; title = "ពិន្ទុប្រចាំឆមាស"; }
-  else if (type === "YEAR") { tableName = "year_scores"; title = "លទ្ធផលប្រចាំឆ្នាំ"; }
-
-  const queryUrl = `${SUPABASE_URL}/rest/v1/${tableName}?student_id=eq.${studentId}&academic_year=eq.${CURRENT_ACADEMIC_YEAR}&order=id.desc`;
+  // បង្ហាញបញ្ជីខែទាំងអស់
+  if (action === "LISTMONTHS") {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/student_scores?student_id=eq.${studentId}&academic_year=eq.${CURRENT_ACADEMIC_YEAR}&select=month_name&order=id.desc`, { headers: getHeaders() });
+    const data = await res.json() || [];
+    const months = [...new Set(data.map(r => r.month_name))].filter(Boolean);
+    
+    if (months.length === 0) return sendMessage(chatId, `📌 មិនទាន់មានពិន្ទុសម្រាប់អត្តលេខ <b>${studentId}</b> ទេ។`);
+    
+    let buttons = [];
+    months.forEach(m => buttons.push([{"text": `📅 ខែ ${m}`, "callback_data": `SHOWMONTH_${studentId}_${m}`}]));
+    await sendMessage(chatId, `👇 <b>សូមជ្រើសរើសខែ៖</b>`, { "inline_keyboard": buttons });
+  } 
   
+  // បង្ហាញពិន្ទុខែណាមួយ
+  else if (action === "SHOWMONTH") {
+    const monthName = parts[2];
+    await displayScore(chatId, studentId, "student_scores", "ពិន្ទុប្រចាំខែ", "month_name", monthName);
+  }
+
+  // បង្ហាញបញ្ជីឆមាសទាំងអស់
+  else if (action === "LISTSEMS") {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/semester_scores?student_id=eq.${studentId}&academic_year=eq.${CURRENT_ACADEMIC_YEAR}&select=semester_name&order=id.desc`, { headers: getHeaders() });
+    const data = await res.json() || [];
+    const sems = [...new Set(data.map(r => r.semester_name))].filter(Boolean);
+    
+    if (sems.length === 0) return sendMessage(chatId, `📌 មិនទាន់មានពិន្ទុឆមាសសម្រាប់អត្តលេខ <b>${studentId}</b> ទេ។`);
+    
+    let buttons = [];
+    sems.forEach(s => buttons.push([{"text": `🌓 ${s}`, "callback_data": `SHOWSEM_${studentId}_${s}`}]));
+    await sendMessage(chatId, `👇 <b>សូមជ្រើសរើសឆមាស៖</b>`, { "inline_keyboard": buttons });
+  }
+
+  // បង្ហាញពិន្ទុឆមាសណាមួយ
+  else if (action === "SHOWSEM") {
+    const semName = parts[2];
+    await displayScore(chatId, studentId, "semester_scores", "ពិន្ទុប្រចាំឆមាស", "semester_name", semName);
+  }
+
+  // បង្ហាញពិន្ទុប្រចាំឆ្នាំ
+  else if (action === "YEAR") {
+    await displayScore(chatId, studentId, "year_scores", "លទ្ធផលប្រចាំឆ្នាំ", null, null);
+  }
+}
+
+async function displayScore(chatId, studentId, tableName, title, periodCol, periodName) {
+  let queryUrl = `${SUPABASE_URL}/rest/v1/${tableName}?student_id=eq.${studentId}&academic_year=eq.${CURRENT_ACADEMIC_YEAR}`;
+  if (periodCol && periodName) queryUrl += `&${periodCol}=eq.${encodeURIComponent(periodName)}`;
+  queryUrl += `&order=id.desc&limit=1`;
+
   try {
-      const res = await fetch(queryUrl, { 
-        headers: { "apikey": SUPABASE_SERVICE_KEY, "Authorization": `Bearer ${SUPABASE_SERVICE_KEY}` }
-      });
+      const res = await fetch(queryUrl, { headers: getHeaders() });
       const data = await res.json() || [];
 
       if (data.length === 0) {
-        await sendMessage(chatId, `📌 មិនទាន់មានលទ្ធផល <b>${title}</b> សម្រាប់អត្តលេខ <b>${studentId}</b> ក្នុងឆ្នាំសិក្សា ${CURRENT_ACADEMIC_YEAR} នៅឡើយទេ។`);
-        return;
+        await sendMessage(chatId, `📌 មិនទាន់មានទិន្នន័យនៅឡើយទេ។`); return;
       }
 
       const latestData = data[0]; 
       
+      // ព្យាយាមទាញយក max_scores ដើម្បីគិតនិទ្ទេស
+      let maxScores = {};
+      try {
+        let gradeLvl = 10, classType = 'General';
+        const gStr = String(latestData.grade || "").toUpperCase();
+        const m = gStr.match(/\d+/);
+        if (m) gradeLvl = parseInt(m[0]);
+        if (gradeLvl >= 11) {
+            if (gStr.includes("SC") || gStr.includes("វិទ្យាសាស្ត្រ") && !gStr.includes("សង្គម")) classType = "SC";
+            else if (gStr.includes("SS") || gStr.includes("សង្គម")) classType = "SS";
+            else classType = "SC"; // Default
+        }
+        const maxRes = await fetch(`${SUPABASE_URL}/rest/v1/max_scores?grade_level=eq.${gradeLvl}&class_type=eq.${classType}`, { headers: getHeaders() });
+        const maxData = await maxRes.json();
+        if (maxData && maxData.length > 0) maxScores = maxData[0];
+      } catch (err) { /* បើអត់ទាន់មានតារាង max_scores វានឹងរំលង */ }
+
+      const actualPeriodName = periodName || 'សរុប';
       let msg = `🎓 <b>ព័ត៌មានសិស្ស (${CURRENT_ACADEMIC_YEAR})</b>\n`;
       msg += `• អត្តលេខ៖ <b>${studentId}</b>\n`;
       msg += `• ឈ្មោះ៖ <b>${latestData.student_name || '-'}</b>\n`;
@@ -163,83 +215,119 @@ async function handleScoreRequest(chatId, actionData) {
       if(latestData.dob) msg += `• ថ្ងៃខែឆ្នាំកំណើត៖ ${latestData.dob}\n`;
       msg += `• ថ្នាក់ទី៖ <b>${latestData.grade || '-'}</b>\n\n`;
 
-      const periodName = latestData.month_name || latestData.semester_name || 'សរុប';
-      msg += `📊 <b>${title} (${periodName})</b>\n`;
+      msg += `📊 <b>${title} (${actualPeriodName})</b>\n`;
       msg += `-----------------------------------\n`;
 
-      const excludeColumns = ["id", "student_id", "student_name", "gender", "dob", "grade", "month_name", "semester_name", "class_rank", "average", "grade_result", "academic_year", "created_at"];
-      
       let hasSubjects = false;
+      let summaryText = "";
+
       for (const [key, value] of Object.entries(latestData)) {
         const normalizedKey = key.toLowerCase();
-        if (!excludeColumns.includes(normalizedKey) && value !== null && value !== "") {
-          let subjectNameInKhmer = SUBJECT_TRANSLATIONS[normalizedKey] || (key.charAt(0).toUpperCase() + key.slice(1));
-          msg += `🔹 ${subjectNameInKhmer} : <b>${value}</b>\n`;
+        
+        // បើជាមុខវិជ្ជា
+        if (!EXCLUDE_COLUMNS.includes(normalizedKey) && !SUMMARY_COLUMNS.includes(normalizedKey) && value !== null && value !== "") {
+          let subjectNameInKhmer = TRANSLATIONS[normalizedKey] || (key.charAt(0).toUpperCase() + key.slice(1));
+          
+          // គិតនិទ្ទេស
+          let gradeLetter = "";
+          if (maxScores[normalizedKey]) {
+             const percent = (parseFloat(value) / parseFloat(maxScores[normalizedKey])) * 100;
+             if(percent >= 85) gradeLetter = " (A)"; else if(percent >= 80) gradeLetter = " (B)";
+             else if(percent >= 70) gradeLetter = " (C)"; else if(percent >= 65) gradeLetter = " (D)";
+             else if(percent >= 50) gradeLetter = " (E)"; else gradeLetter = " (F)";
+          }
+
+          msg += `🔹 ${subjectNameInKhmer} : <b>${value}</b>${gradeLetter}\n`;
           hasSubjects = true;
+        }
+
+        // បើជាទិន្នន័យសរុប (Total Score, Rank...)
+        if (SUMMARY_COLUMNS.includes(normalizedKey) && value !== null && value !== "") {
+            let labelKhmer = TRANSLATIONS[normalizedKey] || key;
+            summaryText += `🔹 ${labelKhmer} : <b>${value}</b>\n`;
         }
       }
 
       if (!hasSubjects) msg += `<i>មិនទាន់មានពិន្ទុមុខវិជ្ជាលម្អិតទេ</i>\n`;
+      if (summaryText !== "") {
+          msg += `-----------------------------------\n`;
+          msg += summaryText;
+      }
+
       msg += `-----------------------------------\n`;
       msg += `📈 <b>របាយការណ៍សរុប៖</b>\n`;
       msg += `• មធ្យមភាគ៖ <b>${latestData.average || '-'}</b>\n`;
       msg += `• ចំណាត់ថ្នាក់ទី៖ <b>${latestData.class_rank || '-'}</b>\n`;
       msg += `• និទ្ទេស/លទ្ធផល៖ <b>${latestData.grade_result || '-'}</b>\n`;
 
-      await sendMessage(chatId, msg);
+      // ប៊ូតុង Link ទៅវិបសាយផ្ទាល់
+      const webUrl = `https://www.kp-tralach.org/student.html?id=${studentId}&period=${encodeURIComponent(actualPeriodName)}`;
+      const inlineBtn = { "inline_keyboard": [[{"text": "🌐 មើលរបាយការណ៍លើវិបសាយ", "url": webUrl}]] };
+
+      await sendMessage(chatId, msg, inlineBtn);
   } catch (err) {
-      await sendMessage(chatId, "❌ មានបញ្ហាក្នុងការទាញយកពិន្ទុពីប្រព័ន្ធ។ សូមព្យាយាមម្តងទៀត។");
+      await sendMessage(chatId, "❌ មានបញ្ហាក្នុងការទាញយកពិន្ទុពីប្រព័ន្ធ។");
   }
 }
 
+// ទាញយក ID សិស្សដែលបានភ្ជាប់
 async function getLinkedStudentIds(chatId) {
-  const headers = { "apikey": SUPABASE_SERVICE_KEY, "Authorization": `Bearer ${SUPABASE_SERVICE_KEY}` };
   const strId = String(chatId);
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/telegram_db?select=student_id,telegram_parent,telegram_student`, { headers });
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/telegram_db?select=student_id,telegram_parent,telegram_student`, { headers: getHeaders() });
   const data = await res.json() || [];
   let linkedIds = [];
   data.forEach(row => {
-    const parents = row.telegram_parent ? row.telegram_parent.split(",") : [];
-    const students = row.telegram_student ? row.telegram_student.split(",") : [];
-    if (parents.includes(strId) || students.includes(strId)) linkedIds.push(row.student_id);
+    if ((row.telegram_parent || "").includes(strId) || (row.telegram_student || "").includes(strId)) linkedIds.push(row.student_id);
   });
   return linkedIds;
 }
 
+// រក្សាទុក ID Telegram
 async function saveTelegramIdToSupabase(chatId, studentId, role) {
-  const headers = { "apikey": SUPABASE_SERVICE_KEY, "Authorization": `Bearer ${SUPABASE_SERVICE_KEY}`, "Content-Type": "application/json" };
   const targetColumn = (role === "parent") ? "telegram_parent" : "telegram_student";
   const getUrl = `${SUPABASE_URL}/rest/v1/telegram_db?student_id=eq.${studentId}`;
-
   try {
-    const getRes = await fetch(getUrl, { method: "GET", headers });
+    const getRes = await fetch(getUrl, { method: "GET", headers: getHeaders() });
     const data = await getRes.json();
-
     if (data && data.length > 0) {
       const existingIds = data[0][targetColumn] || "";
       const idArray = existingIds ? existingIds.split(",") : [];
       if (!idArray.includes(String(chatId))) {
         idArray.push(String(chatId));
-        await fetch(getUrl, { method: "PATCH", headers, body: JSON.stringify({ [targetColumn]: idArray.join(",") }) });
-        return "NEW_LINK";
-      } else return "ALREADY_LINKED"; 
+        await fetch(getUrl, { method: "PATCH", headers: getHeaders(), body: JSON.stringify({ [targetColumn]: idArray.join(",") }) });
+      }
     } else {
-      await fetch(`${SUPABASE_URL}/rest/v1/telegram_db`, { method: "POST", headers, body: JSON.stringify({ "student_id": studentId, [targetColumn]: String(chatId) }) });
-      return "NEW_LINK";
+      await fetch(`${SUPABASE_URL}/rest/v1/telegram_db`, { method: "POST", headers: getHeaders(), body: JSON.stringify({ "student_id": studentId, [targetColumn]: String(chatId) }) });
     }
-  } catch (err) { return "ERROR"; }
+  } catch (err) { }
 }
 
+// ម៉ឺនុយជ្រើសរើសប្រភេទពិន្ទុ
 async function sendScoreMenu(chatId, studentId) {
   const inlineKeyboard = {
     "inline_keyboard": [
-      [{"text": "📅 ប្រចាំខែ", "callback_data": `MONTH_${studentId}`}, {"text": "🌓 ប្រចាំឆមាស", "callback_data": `SEMESTER_${studentId}`}],
+      [{"text": "📅 ប្រចាំខែ", "callback_data": `LISTMONTHS_${studentId}`}, {"text": "🌓 ប្រចាំឆមាស", "callback_data": `LISTSEMS_${studentId}`}],
       [{"text": "🏆 ប្រចាំឆ្នាំ", "callback_data": `YEAR_${studentId}`}]
     ]
   };
   await sendMessage(chatId, `🎯 <b>សូមជ្រើសរើសប្រភេទពិន្ទុ</b>\n(អត្តលេខ៖ ${studentId})`, inlineKeyboard);
 }
 
+// ម៉ឺនុយ Link សំខាន់ៗ (ថ្មី)
+async function sendLinksMenu(chatId) {
+  const inlineKeyboard = { "inline_keyboard": [
+      [{"text": "📄 ទាញយកឯកសារលម្អិតជា PDF", "url": "https://www.kp-tralach.org/student.html"}],
+      [{"text": "📈 មុខងារវិភាគបាក់ឌុប (ទី១១-១២)", "url": "https://www.kp-tralach.org/bac2.html"}],
+      [{"text": "🌐 ចូលទស្សនាគេហទំព័រសាលារៀន", "url": "https://www.kp-tralach.org"}],
+      [{"text": "👥 ភ្ជាប់ទំនាក់ទំនងក្រុមអាណាព្យាបាល", "url": "https://t.me/+HgeqMiuiyy8yMDRl"}],
+      [{"text": "📘 បណ្ដាញហ្វេសប៊ុកសាលារៀន", "url": "https://www.facebook.com/share/1aWBeaRLMM/"}],
+      [{"text": "🎵 បណ្ដាញតិកតុកសាលារៀន", "url": "https://www.tiktok.com/@hunsenkampongtralach?_r=1&_t=ZS-94avuE7Osuz"}],
+      [{"text": "▶️ បណ្ដាញយូធូបសាលារៀន", "url": "https://youtube.com/channel/UC_Ke8cGr0nMKqxsQfBpReFQ?si=JPxa0xq0INTzOdEo"}]
+  ]};
+  await sendMessage(chatId, "🌐 <b>សូមជ្រើសរើសតំណភ្ជាប់ខាងក្រោម៖</b>", inlineKeyboard);
+}
+
+// ក្តារចុចគោល
 function getMainKeyboard() {
   return { 
     "keyboard": [[{"text": "📊 មើលលទ្ធផលសិក្សា"}], [{"text": "🔗 បណ្ដាញទំនាក់ទំនង និង ឯកសារ"}], [{"text": "📩 រាយការណ៍ ឬប្ដឹងតវ៉ា"}]], 
@@ -247,15 +335,7 @@ function getMainKeyboard() {
   };
 }
 
-async function sendLinksMenu(chatId) {
-  const inlineKeyboard = { "inline_keyboard": [
-      [{"text": "📄 ទាញយកឯកសារលម្អិតជា PDF", "url": "https://www.kp-tralach.org/student.html"}],
-      [{"text": "📈 វិភាគបាក់ឌុប", "url": "https://www.kp-tralach.org/bac2.html"}],
-      [{"text": "🌐 ចូលទស្សនាគេហទំព័រសាលារៀន", "url": "https://www.kp-tralach.org"}]
-  ]};
-  await sendMessage(chatId, "🌐 <b>សូមជ្រើសរើសតំណភ្ជាប់ខាងក្រោម៖</b>", inlineKeyboard);
-}
-
+// ផ្ញើសារទូទៅ
 async function sendMessage(chatId, text, customKeyboard) {
   const payload = { chat_id: chatId, text: text, parse_mode: "HTML", disable_web_page_preview: true };
   if (customKeyboard) payload.reply_markup = customKeyboard; 
@@ -263,7 +343,10 @@ async function sendMessage(chatId, text, customKeyboard) {
     await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, { 
       method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) 
     }); 
-  } catch (err) { console.error("Error sending message:", err); }
+  } catch (err) { }
 }
 
-
+// ក្បាល API (Headers)
+function getHeaders() {
+  return { "apikey": SUPABASE_SERVICE_KEY, "Authorization": `Bearer ${SUPABASE_SERVICE_KEY}`, "Content-Type": "application/json" };
+}
