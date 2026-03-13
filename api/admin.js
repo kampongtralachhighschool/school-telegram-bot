@@ -9,9 +9,10 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
   res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
 
-  // ២. ដោះស្រាយ HTTP OPTIONS (Preflight Request របស់ Browser ត្រូវតែឆ្លើយតប 200 OK)
+  // ២. ដោះស្រាយ HTTP OPTIONS (Preflight Request របស់ Browser) ត្រូវឆ្លើយតបជានិច្ច
   if (req.method === 'OPTIONS') {
-    return res.status(200).json({}); 
+    res.status(200).end();
+    return;
   }
 
   if (req.method !== 'POST') {
