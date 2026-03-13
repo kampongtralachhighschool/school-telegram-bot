@@ -2,15 +2,18 @@ const BOT_TOKEN = "8698376263:AAFZrgpSJ81LeiyBCDK6K_OKN2ZvwCqyzbg";
 const SUPABASE_URL = "https://bcezphbxnimyhtylkvrx.supabase.co";
 const SUPABASE_SERVICE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJjZXpwaGJ4bmlteWh0eWxrdnJ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4OTA2ODYsImV4cCI6MjA4ODQ2NjY4Nn0.lFzwMvdmyRXfWq1ZbJVoM6EwkLeJXXuoVGoHGjukRQc";
 
-// កែពី module.exports មកជា export default វិញ
+// ដូរពី module.exports មកជា export default វិញ ទើប Vercel ស្គាល់
 export default async function handler(req, res) {
-  // អនុញ្ញាតឲ្យ Request អាចឆ្លងកាត់បាន (CORS)
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  // ទី១៖ បើកសិទ្ធិ CORS ដើម្បីកុំឲ្យ Browser Block
+  res.setHeader('Access-Control-Allow-Credentials', true);
+  res.setHeader('Access-Control-Allow-Origin', '*'); 
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
 
+  // បើជា OPTIONS request (សុវត្ថិភាព Preflight ពី Browser) ឲ្យវាឆ្លងកាត់ភ្លាមៗ
   if (req.method === 'OPTIONS') {
-    return res.status(200).end();
+    res.status(200).end();
+    return;
   }
 
   if (req.method !== 'POST') {
@@ -37,7 +40,6 @@ export default async function handler(req, res) {
 
       const finalMessage = `📢 <b>សេចក្ដីជូនដំណឹងពីសាលារៀន៖</b>\n\n${messageText}`;
 
-      // បាញ់សារទៅកាន់គ្រប់គណនីស្របពេលគ្នា
       const promises = telegramUsers.map(chatId => sendMessage(chatId, finalMessage));
       const results = await Promise.all(promises);
       successCount = results.filter(Boolean).length;
