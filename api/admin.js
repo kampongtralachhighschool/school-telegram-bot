@@ -3,13 +3,13 @@ const SUPABASE_URL = "https://bcezphbxnimyhtylkvrx.supabase.co";
 const SUPABASE_SERVICE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJjZXpwaGJ4bmlteWh0eWxrdnJ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4OTA2ODYsImV4cCI6MjA4ODQ2NjY4Nn0.lFzwMvdmyRXfWq1ZbJVoM6EwkLeJXXuoVGoHGjukRQc";
 
 export default async function handler(req, res) {
-  // ១. បើកសិទ្ធិ CORS ដើម្បីដោះស្រាយបញ្ហា Block ពី Browser ទាំងស្រុង
+  // ១. បើកសិទ្ធិ CORS (ការពារ Browser Block)
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*'); 
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
   res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
 
-  // ២. ដោះស្រាយ HTTP OPTIONS (Preflight Request របស់ Browser) ត្រូវឆ្លើយតបជានិច្ច
+  // ២. ឆ្លើយតប Preflight Request (OPTIONS) ភ្លាមៗ
   if (req.method === 'OPTIONS') {
     res.status(200).end();
     return;
@@ -23,7 +23,7 @@ export default async function handler(req, res) {
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
     const action = body.action;
 
-    // ទាញយកអត្តលេខ Telegram ទាំងអស់ពី Supabase (តារាង telegram_db)
+    // ទាញយកអត្តលេខ Telegram ទាំងអស់ពី Supabase
     const telegramUsers = await getAllTelegramIds();
     
     if (telegramUsers.length === 0) {
@@ -46,7 +46,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: true, count: successCount });
     }
 
-    // ប្រសិនបើបញ្ជាផ្ញើពិន្ទុ (Broadcast Score Notification)
+    // ប្រសិនបើបញ្ជាផ្ញើពិន្ទុ (Broadcast Score)
     if (action === "broadcast_score") {
       const month = body.month;
       const year = body.year;
@@ -69,7 +69,7 @@ export default async function handler(req, res) {
   }
 }
 
-// អនុគមន៍សម្រាប់ទាញ Chat ID អ្នកប្រើប្រាស់ទាំងអស់ពី Supabase
+// អនុគមន៍សម្រាប់ទាញ Chat ID
 async function getAllTelegramIds() {
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/telegram_db?select=telegram_parent,telegram_student`, {
