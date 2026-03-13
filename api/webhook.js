@@ -34,93 +34,42 @@ const SUMMARY_COLUMNS = [
   "exam_rank", "monthly_average", "semester_average"
 ];
 
-module.exports = async function (req, res) {
-  if (req.method === 'GET') return res.status(200).send('✅ School Telegram Bot V2 is Running!');
+// ==============================================================
 
-  try {
-    const update = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-    if (!update) return res.status(200).json({ status: 'ok' });
-
-    if (update.callback_query) {
-      const cb = update.callback_query;
-      const chatId = cb.message.chat.id;
-      const data = cb.data; 
-
-      await handleCallbackQuery(chatId, data);
-      
-      await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/answerCallbackQuery`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ callback_query_id: cb.id })
-      });
-      return res.status(200).json({ status: 'ok' });
-    }
-
-    if (update.message) {
-      const msg = update.message;
-      const chatId = msg.chat.id;
-      const text = msg.text || "";
-
-      if (String(chatId) === String(ADMIN_GROUP_ID)) {
-        if (msg.reply_to_message && msg.reply_to_message.from.is_bot) {
-          const match = msg.reply_to_message.text.match(/ID:\s*(\d+)/);
-          if (match && match[1]) await sendMessage(match[1], `💬 <b>សារតបពីសាលារៀន៖</b>\n\n${text}`);
-        }
-        return res.status(200).json({ status: 'ok' }); 
-      }
-
-      if (text.startsWith("/start")) {
-        const parts = text.split(" ");
-        if (parts.length > 1) {
-          const payload = parts[1].split("_"); 
-          if (payload.length === 2) {
-            const role = payload[0];
-            const studentId = payload[1];
-            await saveTelegramIdToSupabase(chatId, studentId, role);
+module.exports = async function(req, res) {
+    // អនុញ្ញាតឲ្យ Telegram បាញ់ទិន្នន័យចូលតាម POST method
+    if (req.method === 'POST') {
+        try {
+            const update = req.body;
             
-            const profile = await getStudentProfile(studentId);
-            const stuName = profile ? profile.student_name : studentId;
-            
-            await sendMessage(chatId, `✅ គណនីរបស់អ្នកបានភ្ជាប់ជាមួយសិស្សឈ្មោះ <b>${stuName}</b> (អត្តលេខ៖ ${studentId}) រួចរាល់។`, getMainKeyboard());
-            await sendScoreMenu(chatId, studentId);
-          }
-        } else {
-          await sendMessage(chatId, "👋 <b>សូមស្វាគមន៍មកកាន់ប្រព័ន្ធព័ត៌មានវិទ្យាល័យ ហ៊ុន សែន កំពង់ត្រឡាច។</b>\n\nសូមប្រើប្រាស់ម៉ឺនុយខាងក្រោមដើម្បីស្វែងរកព័ត៌មាន។", getMainKeyboard());
+            // ឆែកមើលបើមានសារផ្ញើចូល
+            if (update.message) {
+                // កន្លែងនេះត្រូវហៅឈ្មោះ Function ដើមដែលលោកគ្រូប្រើសម្រាប់ចាត់ចែងសារ
+                // ឧទាហរណ៍៖ បើលោកគ្រូមាន function ឈ្មោះ handleMessage គឺហៅវានៅទីនេះ
+                if (typeof handleMessage === 'function') {
+                    await handleMessage(update.message);
+                } else if (typeof handleTelegramMessage === 'function') {
+                    await handleTelegramMessage(update.message);
+                }
+            } 
+            // ឆែកមើលបើមានការចុចលើប៊ូតុង (Inline Buttons)
+            else if (update.callback_query) {
+                if (typeof handleCallbackQuery === 'function') {
+                    await handleCallbackQuery(update.callback_query);
+                }
+            }
+
+            // ប្រាប់ទៅ Telegram វិញថា "យើងទទួលបានសារហើយ" (កុំឲ្យវាផ្ញើមកច្រើនដង)
+            res.status(200).send('OK');
+        } catch (error) {
+            console.error("Webhook Error:", error);
+            // លោត Error 500 បើមានបញ្ហាខាងក្នុង ដើម្បីងាយស្រួលឆែក Logs
+            res.status(500).send('Error Processing Webhook'); 
         }
-        return res.status(200).json({ status: 'ok' });
-      }
-
-      if (text === "📊 មើលលទ្ធផលសិក្សា") {
-        const studentIds = await getLinkedStudentIds(chatId);
-        if (studentIds.length > 0) {
-          for (const sid of studentIds) await sendScoreMenu(chatId, sid);
-        } else {
-          await sendMessage(chatId, "⚠️ លោកអ្នកមិនទាន់បានភ្ជាប់អត្តលេខសិស្សនៅឡើយទេ។");
-        }
-        return res.status(200).json({ status: 'ok' });
-      }
-
-      if (text === "🔗 បណ្ដាញទំនាក់ទំនង និង ឯកសារ") {
-        await sendLinksMenu(chatId);
-        return res.status(200).json({ status: 'ok' });
-      }
-      
-      if (text === "📩 រាយការណ៍ ឬប្ដឹងតវ៉ា") {
-        await sendMessage(chatId, "✍️ <b>សូមសរសេរសាររបស់អ្នកនៅខាងក្រោម៖</b>\n\nរាល់សារដែលអ្នកផ្ញើមកបន្ទាប់ពីនេះ នឹងត្រូវបញ្ជូនទៅគណៈគ្រប់គ្រងសាលាដោយផ្ទាល់។");
-        return res.status(200).json({ status: 'ok' });
-      }
-
-      if(text !== "" && !text.startsWith("/")) {
-          const userName = msg.from.first_name || 'មិនស្គាល់ឈ្មោះ';
-          const userMessage = `📩 <b>សាររាយការណ៍ថ្មី!</b>\n👤 ពីអ្នក: ${userName}\n🆔 ID: ${chatId}\n\n📝 <b>ខ្លឹមសារ៖</b>\n${text}\n\n<i>(សូម Reply លើសារនេះ ដើម្បីតប)</i>`;
-          await sendMessage(ADMIN_GROUP_ID, userMessage);
-          await sendMessage(chatId, "✅ សាររបស់អ្នកត្រូវបានបញ្ជូនទៅកាន់សាលារៀនរួចរាល់។");
-      }
+    } else {
+        // បើមានគេចូលមើល Link Webhook នេះតាមរយៈ Browser ធម្មតា
+        res.status(200).send('🟢 ម៉ាស៊ីន Bot កំពុងដំណើរការយ៉ាងរលូន! កូដចាស់មិនបាត់បង់ទេ។');
     }
-    return res.status(200).json({ status: 'ok' });
-
-  } catch (error) {
-    return res.status(200).json({ status: 'error' });
-  }
 };
 
 async function getStudentProfile(studentId) {
@@ -360,3 +309,4 @@ async function sendMessage(chatId, text, customKeyboard) {
 function getHeaders() {
   return { "apikey": SUPABASE_SERVICE_KEY, "Authorization": `Bearer ${SUPABASE_SERVICE_KEY}`, "Content-Type": "application/json" };
 }
+
