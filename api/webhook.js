@@ -36,41 +36,33 @@ const SUMMARY_COLUMNS = [
 
 // ==============================================================
 
-module.exports = async function(req, res) {
-    // អនុញ្ញាតឲ្យ Telegram បាញ់ទិន្នន័យចូលតាម POST method
+export default async function handler(req, res) {
     if (req.method === 'POST') {
         try {
             const update = req.body;
             
-            // ឆែកមើលបើមានសារផ្ញើចូល
+            // ហៅ Function ដើមរបស់លោកគ្រូឲ្យដំណើរការ
             if (update.message) {
-                // កន្លែងនេះត្រូវហៅឈ្មោះ Function ដើមដែលលោកគ្រូប្រើសម្រាប់ចាត់ចែងសារ
-                // ឧទាហរណ៍៖ បើលោកគ្រូមាន function ឈ្មោះ handleMessage គឺហៅវានៅទីនេះ
-                if (typeof handleMessage === 'function') {
-                    await handleMessage(update.message);
-                } else if (typeof handleTelegramMessage === 'function') {
+                if (typeof handleTelegramMessage === 'function') {
                     await handleTelegramMessage(update.message);
+                } else if (typeof handleMessage === 'function') {
+                    await handleMessage(update.message);
                 }
-            } 
-            // ឆែកមើលបើមានការចុចលើប៊ូតុង (Inline Buttons)
-            else if (update.callback_query) {
+            } else if (update.callback_query) {
                 if (typeof handleCallbackQuery === 'function') {
                     await handleCallbackQuery(update.callback_query);
                 }
             }
-
-            // ប្រាប់ទៅ Telegram វិញថា "យើងទទួលបានសារហើយ" (កុំឲ្យវាផ្ញើមកច្រើនដង)
+            
             res.status(200).send('OK');
         } catch (error) {
-            console.error("Webhook Error:", error);
-            // លោត Error 500 បើមានបញ្ហាខាងក្នុង ដើម្បីងាយស្រួលឆែក Logs
-            res.status(500).send('Error Processing Webhook'); 
+            console.error("🔥 Webhook Error:", error);
+            res.status(500).send('Error');
         }
     } else {
-        // បើមានគេចូលមើល Link Webhook នេះតាមរយៈ Browser ធម្មតា
-        res.status(200).send('🟢 ម៉ាស៊ីន Bot កំពុងដំណើរការយ៉ាងរលូន! កូដចាស់មិនបាត់បង់ទេ។');
+        res.status(200).send('🟢 Bot កំពុងដំណើរការយ៉ាងរលូន! (ES Module Active)');
     }
-};
+}
 
 async function getStudentProfile(studentId) {
   try {
@@ -309,4 +301,5 @@ async function sendMessage(chatId, text, customKeyboard) {
 function getHeaders() {
   return { "apikey": SUPABASE_SERVICE_KEY, "Authorization": `Bearer ${SUPABASE_SERVICE_KEY}`, "Content-Type": "application/json" };
 }
+
 
