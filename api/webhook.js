@@ -288,18 +288,38 @@ function getMainKeyboard() {
   };
 }
 
-async function sendMessage(chatId, text, customKeyboard) {
-  const payload = { chat_id: chatId, text: text, parse_mode: "HTML", disable_web_page_preview: true };
-  if (customKeyboard) payload.reply_markup = customKeyboard; 
-  try { 
-    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, { 
-      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) 
-    }); 
-  } catch (err) { }
+async function sendMessage(chatId, text, replyMarkup = null) {
+    // ប្រើ .trim() ដើម្បីការពារក្រែងលោមានជាប់ការដកឃ្លា (Space) លើ Token
+    const url = `https://api.telegram.org/bot${BOT_TOKEN.trim()}/sendMessage`;
+    
+    try {
+        const payload = {
+            chat_id: chatId,
+            text: text,
+            parse_mode: "HTML"
+        };
+        
+        if (replyMarkup) {
+            payload.reply_markup = replyMarkup;
+        }
+
+        const response = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            console.error("🔥 Telegram បដិសេធការផ្ញើសារ:", await response.text());
+        }
+    } catch (error) {
+        console.error("🔥 បញ្ហាភ្ជាប់ទៅកាន់ Telegram API:", error);
+    }
 }
 
 function getHeaders() {
   return { "apikey": SUPABASE_SERVICE_KEY, "Authorization": `Bearer ${SUPABASE_SERVICE_KEY}`, "Content-Type": "application/json" };
 }
+
 
 
