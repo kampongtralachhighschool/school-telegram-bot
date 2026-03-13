@@ -34,24 +34,20 @@ const SUMMARY_COLUMNS = [
   "exam_rank", "monthly_average", "semester_average"
 ];
 
-// ==============================================================
-
+// កែ Function handler នេះវិញ
 export default async function handler(req, res) {
     if (req.method === 'POST') {
         try {
             const update = req.body;
             
-            // ហៅ Function ដើមរបស់លោកគ្រូឲ្យដំណើរការ
             if (update.message) {
-                if (typeof handleTelegramMessage === 'function') {
-                    await handleTelegramMessage(update.message);
-                } else if (typeof handleMessage === 'function') {
-                    await handleMessage(update.message);
-                }
+                // ដំណើរការពេលគេឆាតធម្មតា ឬចុច /start
+                await handleMessage(update.message);
             } else if (update.callback_query) {
-                if (typeof handleCallbackQuery === 'function') {
-                    await handleCallbackQuery(update.callback_query);
-                }
+                // ដំណើរការពេលគេចុចប៊ូតុង (Inline Keyboard)
+                const chatId = update.callback_query.message.chat.id;
+                const actionData = update.callback_query.data;
+                await handleCallbackQuery(chatId, actionData);
             }
             
             res.status(200).send('OK');
@@ -63,6 +59,40 @@ export default async function handler(req, res) {
         res.status(200).send('🟢 Bot កំពុងដំណើរការយ៉ាងរលូន! (ES Module Active)');
     }
 }
+
+// ==========================================
+// បន្ថែម Function ថ្មីមួយនេះសម្រាប់អោយ Bot អាចឆ្លើយតបសារបាន
+// (លោកគ្រូអាចយកវាទៅដាក់ពីក្រោម Function handler ខាងលើបាន)
+async function handleMessage(message) {
+    const chatId = message.chat.id;
+    const text = message.text;
+
+    if (!text) return; // បើមិនមែនជាអក្សរ មិនបាច់ខ្វល់
+
+    if (text === '/start') {
+        // បង្ហាញម៉ឺនុយពេលសិស្សចូលដំបូង
+        await sendMessage(chatId, "សួស្ដី! សូមស្វាគមន៍មកកាន់ប្រព័ន្ធតេឡេក្រាមរបស់សាលា។\nសូមជ្រើសរើសម៉ឺនុយខាងក្រោម៖", getMainKeyboard());
+    } 
+    else if (text === '📊 មើលលទ្ធផលសិក្សា') {
+        await sendMessage(chatId, "សូមវាយបញ្ចូល **អត្តលេខសិស្ស** របស់អ្នក (ឧទាហរណ៍៖ 12345)៖", {"reply_markup": {"remove_keyboard": true}});
+    } 
+    else if (text === '🔗 បណ្ដាញទំនាក់ទំនង និង ឯកសារ') {
+        await sendLinksMenu(chatId);
+    } 
+    else if (text === '📩 រាយការណ៍ ឬប្ដឹងតវ៉ា') {
+        await sendMessage(chatId, "សូមសរសេរសាររាយការណ៍របស់អ្នកនៅទីនេះ។ យើងនឹងរក្សាការសម្ងាត់ជូន។");
+    } 
+    else {
+        // បើគេវាយជាលេខ សន្មតថាគេវាយបញ្ចូលអត្តលេខសិស្ស
+        if (!isNaN(text.trim())) {
+            const studentId = text.trim();
+            await sendScoreMenu(chatId, studentId);
+        } else {
+            await sendMessage(chatId, "សូមជ្រើសរើសម៉ឺនុយខាងក្រោម ឬវាយបញ្ចូលអត្តលេខសិស្សដើម្បីមើលពិន្ទុ។", getMainKeyboard());
+        }
+    }
+}
+// ==========================================
 
 async function getStudentProfile(studentId) {
   try {
@@ -320,6 +350,7 @@ async function sendMessage(chatId, text, replyMarkup = null) {
 function getHeaders() {
   return { "apikey": SUPABASE_SERVICE_KEY, "Authorization": `Bearer ${SUPABASE_SERVICE_KEY}`, "Content-Type": "application/json" };
 }
+
 
 
 
