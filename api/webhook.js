@@ -62,28 +62,64 @@ export default async function handler(req, res) {
 
 // ==========================================
 // បន្ថែម Function ថ្មីមួយនេះសម្រាប់អោយ Bot អាចឆ្លើយតបសារបាន
-// (លោកគ្រូអាចយកវាទៅដាក់ពីក្រោម Function handler ខាងលើបាន)
 async function handleMessage(message) {
     const chatId = message.chat.id;
     const text = message.text;
+    const isGroup = message.chat.type === 'group' || message.chat.type === 'supergroup';
 
-    if (!text) return; // បើមិនមែនជាអក្សរ មិនបាច់ខ្វល់
+    // -----------------------------------------------------
+    // ផ្នែកទី១៖ សម្រាប់ Admin នៅក្នុង Group ឆ្លើយតបទៅសិស្សវិញ
+    // -----------------------------------------------------
+    if (isGroup && String(chatId) === ADMIN_GROUP_ID) {
+        // បើ Admin ចុច Reply លើសាររបស់ Bot នៅក្នុង Group
+        if (message.reply_to_message && message.reply_to_message.from.id.toString() === BOT_TOKEN.split(':')[0]) {
+            const botText = message.reply_to_message.text || "";
+            // ចាប់យក ID របស់សិស្សពីក្នុងសារដែល Bot បាន Forward មក
+            const match = botText.match(/ID:\s*(\d+)/); 
+            if (match && match[1] && text) {
+                const originalUserId = match[1];
+                // ផ្ញើសារដែល Admin តប ទៅកាន់សិស្សវិញ
+                await sendMessage(originalUserId, `👨‍🏫 <b>ការឆ្លើយតបពីសាលា៖</b>\n\n${text}`);
+            }
+        }
+        return; // បញ្ចប់ត្រឹមនេះ មិនបាច់ឲ្យកូដរត់ទៅក្រោមទៀតទេសម្រាប់ Group
+    }
 
+    // -----------------------------------------------------
+    // ផ្នែកទី២៖ សម្រាប់សិស្សឆាតមកកាន់ Bot ជាលក្ខណៈឯកជន
+    // -----------------------------------------------------
+    if (!text || isGroup) return;
+
+    // ឆែកមើលថាតើសិស្សកំពុងវាយសាររាយការណ៍ឬទេ? (តាមរយៈការ Reply លើសំណួររបស់ Bot)
+    if (message.reply_to_message && message.reply_to_message.text && message.reply_to_message.text.includes('សូមសរសេរសាររាយការណ៍')) {
+        const userName = message.from.first_name || "សិស្ស/អាណាព្យាបាល";
+        const forwardText = `📩 <b>មានសាររាយការណ៍ថ្មី</b>\n👤 ឈ្មោះ: ${userName}\n🆔 ID: ${chatId}\n\n📝 <b>ខ្លឹមសារ៖</b>\n${text}\n\n<i>(📌 របៀបតប៖ លោកគ្រូអ្នកគ្រូ សូមចុច Reply លើសារមួយនេះ ដើម្បីឆ្លើយតបទៅកាន់គាត់វិញ)</i>`;
+        
+        await sendMessage(ADMIN_GROUP_ID, forwardText);
+        await sendMessage(chatId, "✅ សាររបស់អ្នកត្រូវបានបញ្ជូនទៅកាន់គណៈគ្រប់គ្រងសាលារួចរាល់។ សូមរង់ចាំការឆ្លើយតប។");
+        return;
+    }
+
+    // ដំណើរការម៉ឺនុយធម្មតា
     if (text === '/start') {
-        // បង្ហាញម៉ឺនុយពេលសិស្សចូលដំបូង
         await sendMessage(chatId, "សួស្ដី! សូមស្វាគមន៍មកកាន់ប្រព័ន្ធតេឡេក្រាមរបស់សាលា។\nសូមជ្រើសរើសម៉ឺនុយខាងក្រោម៖", getMainKeyboard());
     } 
     else if (text === '📊 មើលលទ្ធផលសិក្សា') {
-        await sendMessage(chatId, "សូមវាយបញ្ចូល **អត្តលេខសិស្ស** របស់អ្នក (ឧទាហរណ៍៖ 12345)៖", {"reply_markup": {"remove_keyboard": true}});
+        await sendMessage(chatId, "សូមវាយបញ្ចូល <b>អត្តលេខសិស្ស</b> របស់អ្នក (ឧទាហរណ៍៖ 12345)៖", {"reply_markup": {"remove_keyboard": true}});
     } 
     else if (text === '🔗 បណ្ដាញទំនាក់ទំនង និង ឯកសារ') {
         await sendLinksMenu(chatId);
     } 
     else if (text === '📩 រាយការណ៍ ឬប្ដឹងតវ៉ា') {
-        await sendMessage(chatId, "សូមសរសេរសាររាយការណ៍របស់អ្នកនៅទីនេះ។ យើងនឹងរក្សាការសម្ងាត់ជូន។");
+        // ប្រើមុខងារ Force Reply ដើម្បីឲ្យសិស្សដឹងថាត្រូវវាយសារនៅទីនេះ
+        const payload = {
+            chat_id: chatId,
+            text: "✍️ សូមសរសេរសាររាយការណ៍របស់អ្នកនៅទីនេះ ហើយចុច Send មកសាលានឹងទទួលបាន (រក្សាការសម្ងាត់)៖",
+            reply_markup: { force_reply: true, selective: true }
+        };
+        await fetch(`https://api.telegram.org/bot${BOT_TOKEN.trim()}/sendMessage`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
     } 
     else {
-        // បើគេវាយជាលេខ សន្មតថាគេវាយបញ្ចូលអត្តលេខសិស្ស
         if (!isNaN(text.trim())) {
             const studentId = text.trim();
             await sendScoreMenu(chatId, studentId);
@@ -246,12 +282,13 @@ async function displayScore(chatId, studentId, tableName, title, periodCol, peri
       msg += `• ចំណាត់ថ្នាក់ទី៖ <b>${finalRank}</b>\n`;
       msg += `• និទ្ទេស/លទ្ធផល៖ <b>${finalResult}</b>\n`; // បង្ហាញនិទ្ទេសច្បាស់ៗនៅទីនេះ
 
-      const webUrl = `https://www.kp-tralach.org/student.html?id=${studentId}&period=${encodeURIComponent(actualPeriodName)}`;
-      const inlineBtn = { "inline_keyboard": [[{"text": "🌐 មើលរបាយការណ៍លើវិបសាយ", "url": webUrl}]] };
+// កែប្រែ Link ឲ្យវាបញ្ជូន id និង month/period ទៅកាន់វេបសាយអូតូ
+      // បើជាខែ វានឹងយកឈ្មោះខែ បើជាឆមាស វានឹងយកឈ្មោះឆមាស
+      let paramKey = periodCol === 'month_name' ? 'month' : 'period';
+      const webUrl = `https://www.kp-tralach.org/student.html?id=${studentId}&${paramKey}=${encodeURIComponent(actualPeriodName)}`;
+      const inlineBtn = { "inline_keyboard": [[{"text": "🌐 មើលរបាយការណ៍លើវិបសាយលម្អិត", "url": webUrl}]] };
 
       await sendMessage(chatId, msg, inlineBtn);
-  } catch (err) {
-      await sendMessage(chatId, "❌ មានបញ្ហាក្នុងការទាញយកពិន្ទុពីប្រព័ន្ធ។");
   }
 }
 
@@ -299,16 +336,23 @@ async function sendScoreMenu(chatId, studentId) {
 }
 
 async function sendLinksMenu(chatId) {
-  const inlineKeyboard = { "inline_keyboard": [
-      [{"text": "📄 ទាញយកឯកសារលម្អិតជា PDF", "url": "https://www.kp-tralach.org/student.html"}],
-      [{"text": "📈 មុខងារវិភាគបាក់ឌុប (ទី១១-១២)", "url": "https://www.kp-tralach.org/bac2.html"}],
-      [{"text": "🌐 ចូលទស្សនាគេហទំព័រសាលារៀន", "url": "https://www.kp-tralach.org"}],
-      [{"text": "👥 ភ្ជាប់ទំនាក់ទំនងក្រុមអាណាព្យាបាល", "url": "https://t.me/+HgeqMiuiyy8yMDRl"}],
-      [{"text": "📘 បណ្ដាញហ្វេសប៊ុកសាលារៀន", "url": "https://www.facebook.com/share/1aWBeaRLMM/"}],
-      [{"text": "🎵 បណ្ដាញតិកតុកសាលារៀន", "url": "https://www.tiktok.com/@hunsenkampongtralach?_r=1&_t=ZS-94avuE7Osuz"}],
-      [{"text": "▶️ បណ្ដាញយូធូបសាលារៀន", "url": "https://youtube.com/channel/UC_Ke8cGr0nMKqxsQfBpReFQ?si=JPxa0xq0INTzOdEo"}]
-  ]};
-  await sendMessage(chatId, "🌐 <b>សូមជ្រើសរើសតំណភ្ជាប់ខាងក្រោម៖</b>", inlineKeyboard);
+    const photoUrl = "https://i.ibb.co/n8fZ33D6/photo-2025-12-25-15-56-18.jpg";
+    const caption = "🌐 <b>បណ្ដាញទំនាក់ទំនង និង ឯកសារសាលារៀន</b>\nសូមជ្រើសរើសតំណភ្ជាប់ខាងក្រោម៖";
+    
+    const inlineKeyboard = { "inline_keyboard": [[{"text": "📄 ទាញយកឯកសារលម្អិតជា PDF", "url": "https://www.kp-tralach.org/student.html"}],[{"text": "📈 មុខងារវិភាគបាក់ឌុប (ទី១១-១២)", "url": "https://www.kp-tralach.org/bac2.html"}],[{"text": "🌐 ចូលទស្សនាគេហទំព័រសាលារៀន", "url": "https://www.kp-tralach.org"}],[{"text": "👥 ភ្ជាប់ទំនាក់ទំនងក្រុមអាណាព្យាបាល", "url": "https://t.me/+HgeqMiuiyy8yMDRl"}],[{"text": "📘 បណ្ដាញហ្វេសប៊ុកសាលារៀន", "url": "https://www.facebook.com/share/1aWBeaRLMM/"}],[{"text": "🎵 បណ្ដាញតិកតុកសាលារៀន", "url": "https://www.tiktok.com/@hunsenkampongtralach?_r=1&_t=ZS-94avuE7Osuz"}],[{"text": "▶️ បណ្ដាញយូធូបសាលារៀន", "url": "https://youtube.com/channel/UC_Ke8cGr0nMKqxsQfBpReFQ?si=JPxa0xq0INTzOdEo"}]
+    ]};
+    
+    // ប្រើ API sendPhoto ជំនួសឲ្យ sendMessage
+    const url = `https://api.telegram.org/bot${BOT_TOKEN.trim()}/sendPhoto`;
+    const payload = {
+        chat_id: chatId,
+        photo: photoUrl,
+        caption: caption,
+        parse_mode: "HTML",
+        reply_markup: inlineKeyboard
+    };
+    
+    await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
 }
 
 function getMainKeyboard() {
@@ -350,6 +394,7 @@ async function sendMessage(chatId, text, replyMarkup = null) {
 function getHeaders() {
   return { "apikey": SUPABASE_SERVICE_KEY, "Authorization": `Bearer ${SUPABASE_SERVICE_KEY}`, "Content-Type": "application/json" };
 }
+
 
 
 
