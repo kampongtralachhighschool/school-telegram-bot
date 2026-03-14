@@ -2,7 +2,7 @@ const BOT_TOKEN = "8698376263:AAFZrgpSJ81LeiyBCDK6K_OKN2ZvwCqyzbg";
 const SUPABASE_URL = "https://bcezphbxnimyhtylkvrx.supabase.co";
 const SUPABASE_SERVICE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJjZXpwaGJ4bmlteWh0eWxrdnJ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4OTA2ODYsImV4cCI6MjA4ODQ2NjY4Nn0.lFzwMvdmyRXfWq1ZbJVoM6EwkLeJXXuoVGoHGjukRQc";
 
-// កូដ HTML ទាំងមូលត្រូវបានរក្សាទុកក្នុងអថេរនេះ (មានចាក់សោរ និងឆ្នាំស្វ័យប្រវត្តិ)
+// កូដ HTML ទាំងមូលត្រូវបានរក្សាទុកក្នុងអថេរនេះ
 const ADMIN_HTML = `
 <!DOCTYPE html>
 <html lang="km">
@@ -30,11 +30,26 @@ const ADMIN_HTML = `
             <p class="text-sm opacity-80">ផ្ទាំងគ្រប់គ្រងសម្រាប់តែអ្នកគ្រប់គ្រង (Admin) ប៉ុណ្ណោះ</p>
         </div>
 
-        <div class="tg-bg rounded-xl shadow-sm p-5 space-y-4 border border-gray-100">
-            <div class="flex items-center space-x-2"><span class="text-xl">📢</span><h2 class="text-lg font-bold">ផ្ញើសារជូនដំណឹងទូទៅ</h2></div>
-            <div>
-                <textarea id="broadcastText" rows="4" class="tg-input w-full rounded-lg p-3 text-sm resize-none" placeholder="វាយបញ្ចូលខ្លឹមសារនៅទីនេះ..."></textarea>
+        <div class="tg-bg rounded-xl shadow-sm p-5 border border-gray-100">
+            <div class="flex items-center space-x-2 mb-4"><span class="text-xl">📢</span><h2 class="text-lg font-bold">ផ្ញើសារជូនដំណឹងទូទៅ</h2></div>
+            
+            <textarea id="broadcastText" rows="3" class="tg-input w-full rounded-lg p-3 text-sm resize-none mb-3" placeholder="វាយបញ្ចូលខ្លឹមសារនៅទីនេះ..."></textarea>
+            
+            <div class="bg-blue-50 p-3 rounded-lg border border-blue-100 mb-4 space-y-3">
+                <div>
+                    <label class="text-xs font-bold text-blue-700 block mb-1">📎 ភ្ជាប់ឯកសារ (រូបភាព ឬ PDF)</label>
+                    <input type="file" id="attachFile" accept="image/*,.pdf" class="tg-input w-full rounded p-2 text-xs bg-white">
+                    <p class="text-[10px] text-gray-500 mt-1">* ទំហំឯកសារមិនត្រូវលើសពី 4MB ទេ</p>
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-blue-700 block mb-1">🔗 ភ្ជាប់ប៊ូតុង Link ពីក្រោមសារ (បើមាន)</label>
+                    <div class="flex space-x-2">
+                        <input type="text" id="btnText" placeholder="ឈ្មោះប៊ូតុង..." class="tg-input w-1/3 rounded p-2 text-xs">
+                        <input type="url" id="btnUrl" placeholder="https://..." class="tg-input w-2/3 rounded p-2 text-xs">
+                    </div>
+                </div>
             </div>
+
             <button id="btnBroadcastMsg" onclick="sendBroadcastMessage()" class="tg-button w-full py-3 rounded-lg font-bold text-sm shadow transition-transform active:scale-95 flex justify-center items-center">
                 បញ្ជូនសារឥឡូវនេះ
             </button>
@@ -53,8 +68,9 @@ const ADMIN_HTML = `
                     </select>
                 </div>
                 <div class="space-y-1">
-                    <label class="text-xs font-bold opacity-70">ឆ្នាំសិក្សា</label>
-                    <select id="scoreYear" class="tg-input w-full rounded-lg p-3 text-sm"></select>
+                    <label class="text-xs font-bold opacity-70">ឆ្នាំសិក្សា (រើស ឬវាយបញ្ចូល)</label>
+                    <input list="scoreYearOptions" id="scoreYear" class="tg-input w-full rounded-lg p-3 text-sm" placeholder="ឧ. ២០២៥-២០២៦">
+                    <datalist id="scoreYearOptions"></datalist>
                 </div>
             </div>
             <button id="btnBroadcastScore" onclick="sendScoreAlert()" class="w-full bg-green-500 hover:bg-green-600 text-white py-3 rounded-lg font-bold text-sm shadow transition-transform active:scale-95 flex justify-center items-center">
@@ -64,59 +80,92 @@ const ADMIN_HTML = `
     </div>
 
     <script>
-        // ដោយសារវានៅក្នុង File តែមួយ យើងអាចប្រើ URL បច្ចុប្បន្នបានតែម្ដង
         const API_URL = window.location.href;
+        let selectedFileData = null;
 
         document.addEventListener("DOMContentLoaded", () => {
             promptPassword();
-            generateYears();
+            generateKhmerYears();
         });
 
         function promptPassword() {
             Swal.fire({
                 title: '🔒 តម្រូវឲ្យមានពាក្យសម្ងាត់',
-                text: 'សូមបញ្ចូលពាក្យសម្ងាត់ដើម្បីចូលទៅកាន់ផ្ទាំង Admin',
                 input: 'password',
                 inputPlaceholder: 'បញ្ចូលពាក្យសម្ងាត់ទីនេះ...',
-                allowOutsideClick: false,
-                allowEscapeKey: false,
-                confirmButtonText: 'ចូលប្រើប្រាស់',
-                confirmButtonColor: '#3b82f6',
+                allowOutsideClick: false, allowEscapeKey: false,
+                confirmButtonText: 'ចូលប្រើប្រាស់', confirmButtonColor: '#3b82f6',
                 inputValidator: (value) => {
                     if (!value) return 'សូមបញ្ចូលពាក្យសម្ងាត់!';
                     if (value !== 'H@nm@m64') return 'ពាក្យសម្ងាត់មិនត្រឹមត្រូវទេ!';
                 }
             }).then((result) => {
-                if (result.isConfirmed) {
-                    document.getElementById('mainContent').style.display = 'block';
-                }
+                if (result.isConfirmed) document.getElementById('mainContent').style.display = 'block';
             });
         }
 
-        function generateYears() {
-            const yearSelect = document.getElementById('scoreYear');
-            yearSelect.innerHTML = ''; 
-            const startYear = 2025;
+        // បម្លែងលេខធម្មតា ទៅលេខខ្មែរ
+        function toKhmerNum(numStr) {
+            const khmerDigits = ['០','១','២','៣','៤','៥','៦','៧','៨','៩'];
+            return numStr.toString().replace(/[0-9]/g, function(d) { return khmerDigits[d]; });
+        }
+
+        // បង្កើតឆ្នាំសិក្សាដាក់ក្នុង Datalist (អាចរើសក៏បាន វាយក៏បាន)
+        function generateKhmerYears() {
+            const dataList = document.getElementById('scoreYearOptions');
+            const yearInput = document.getElementById('scoreYear');
+            const startYear = 2023; // ចាប់ផ្តើមពី 2023
+            let currentYearAuto = new Date().getFullYear();
+            
             for (let i = 0; i <= 15; i++) {
-                let currentYear = startYear + i;
-                let yearString = currentYear + '-' + (currentYear + 1);
+                let yearStr = (startYear + i) + '-' + (startYear + i + 1);
+                let khmerYearStr = toKhmerNum(yearStr);
+                
                 let option = document.createElement('option');
-                option.value = yearString; option.text = yearString;
-                yearSelect.appendChild(option);
+                option.value = khmerYearStr;
+                dataList.appendChild(option);
+                
+                // Set default value ឲ្យចំឆ្នាំបច្ចុប្បន្ន
+                if ((startYear + i) === currentYearAuto) {
+                    yearInput.value = khmerYearStr;
+                }
             }
         }
 
+        // ចាប់យក File ពេលមានការ Upload
+        document.getElementById('attachFile').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) { selectedFileData = null; return; }
+            
+            // កំណត់ទំហំ File ត្រឹម 4MB ដើម្បីកុំឱ្យ Vercel លោត Error 500
+            if (file.size > 4 * 1024 * 1024) {
+                Swal.fire('ឯកសារធំពេក', 'សូមជ្រើសរើសឯកសារទំហំក្រោម 4MB', 'warning');
+                this.value = ''; selectedFileData = null; return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                selectedFileData = {
+                    name: file.name,
+                    mime: file.type,
+                    base64: event.target.result.split(',')[1] // កាត់យកតែទិន្នន័យកូដ
+                };
+            };
+            reader.readAsDataURL(file);
+        });
+
         async function sendBroadcastMessage() {
             let text = document.getElementById('broadcastText').value.trim();
-            if (!text) {
-                Swal.fire({ icon: 'warning', title: 'សូមបំពេញខ្លឹមសារ', confirmButtonText: 'យល់ព្រម' });
+            let btnText = document.getElementById('btnText').value.trim();
+            let btnUrl = document.getElementById('btnUrl').value.trim();
+
+            if (!text && !selectedFileData) {
+                Swal.fire({ icon: 'warning', title: 'សូមបំពេញខ្លឹមសារ ឬភ្ជាប់ឯកសារ', confirmButtonText: 'យល់ព្រម' });
                 return;
             }
 
             Swal.fire({
-                title: 'បញ្ជាក់ការផ្ញើសារ',
-                text: "សារនេះនឹងត្រូវបាញ់ទៅកាន់គ្រប់គណនីទាំងអស់ក្នុងប្រព័ន្ធ។",
-                icon: 'question',
+                title: 'បញ្ជាក់ការផ្ញើសារ', text: "សារនេះនឹងត្រូវបាញ់ទៅកាន់គ្រប់គណនីទាំងអស់។", icon: 'question',
                 showCancelButton: true, confirmButtonColor: '#3b82f6', cancelButtonColor: '#d33',
                 confirmButtonText: 'បាទ/ចាស ផ្ញើ', cancelButtonText: 'បោះបង់'
             }).then(async (result) => {
@@ -128,18 +177,24 @@ const ADMIN_HTML = `
                     try {
                         let res = await fetch(API_URL, {
                             method: "POST", headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ action: "broadcast_message", messageText: text })
+                            body: JSON.stringify({ 
+                                action: "broadcast_message", 
+                                messageText: text,
+                                fileData: selectedFileData,
+                                btnText: btnText,
+                                btnUrl: btnUrl
+                            })
                         });
                         let data = await res.json();
                         if(data.success) {
                             Swal.fire('ជោគជ័យ', 'សារត្រូវបានបាញ់ទៅកាន់ ' + data.count + ' គណនីរួចរាល់។', 'success');
                             document.getElementById('broadcastText').value = '';
-                        } else {
-                            Swal.fire('មានបញ្ហា', data.message || 'មិនអាចបញ្ជូនបាន', 'error');
-                        }
-                    } catch(e) { 
-                        Swal.fire('បរាជ័យ', 'មិនអាចតភ្ជាប់ទៅកាន់ Server បានទេ។', 'error'); 
-                    }
+                            document.getElementById('attachFile').value = '';
+                            document.getElementById('btnText').value = '';
+                            document.getElementById('btnUrl').value = '';
+                            selectedFileData = null;
+                        } else { Swal.fire('មានបញ្ហា', data.message || 'មិនអាចបញ្ជូនបាន', 'error'); }
+                    } catch(e) { Swal.fire('បរាជ័យ', 'មិនអាចតភ្ជាប់ទៅកាន់ Server បានទេ។', 'error'); }
                     btn.innerHTML = originalText; btn.disabled = false;
                 }
             });
@@ -148,11 +203,10 @@ const ADMIN_HTML = `
         async function sendScoreAlert() {
             let month = document.getElementById('scoreMonth').value;
             let year = document.getElementById('scoreYear').value;
+            if(!year) return Swal.fire('បំពេញឆ្នាំសិក្សា', 'សូមបញ្ចូលឆ្នាំសិក្សា', 'warning');
 
             Swal.fire({
-                title: 'ប្រកាសដំណឹងពិន្ទុ?',
-                html: 'តើលោកគ្រូពិតជាចង់ប្រកាសដំណឹងលទ្ធផលសិក្សាប្រចាំ <b>ខែ' + month + ' ឆ្នាំ' + year + '</b> មែនទេ?',
-                icon: 'question',
+                title: 'ប្រកាសដំណឹងពិន្ទុ?', html: 'តើលោកគ្រូពិតជាចង់ប្រកាសដំណឹងលទ្ធផលសិក្សាប្រចាំ <b>ខែ' + month + ' ឆ្នាំ' + year + '</b> មែនទេ?', icon: 'question',
                 showCancelButton: true, confirmButtonColor: '#10b981', cancelButtonColor: '#d33',
                 confirmButtonText: 'បាទ/ចាស ប្រកាស', cancelButtonText: 'បោះបង់'
             }).then(async (result) => {
@@ -167,14 +221,9 @@ const ADMIN_HTML = `
                             body: JSON.stringify({ action: "broadcast_score", month: month, year: year })
                         });
                         let data = await res.json();
-                        if(data.success) {
-                            Swal.fire('ជោគជ័យ', 'ដំណឹងពិន្ទុត្រូវបានប្រកាសទៅកាន់ ' + data.count + ' គណនីរួចរាល់។', 'success');
-                        } else {
-                            Swal.fire('មានបញ្ហា', data.message || 'មិនអាចបញ្ជូនបាន', 'error');
-                        }
-                    } catch(e) { 
-                        Swal.fire('បរាជ័យ', 'មិនអាចតភ្ជាប់ទៅកាន់ Server បានទេ។', 'error'); 
-                    }
+                        if(data.success) { Swal.fire('ជោគជ័យ', 'ដំណឹងពិន្ទុត្រូវបានប្រកាសទៅកាន់ ' + data.count + ' គណនីរួចរាល់។', 'success'); } 
+                        else { Swal.fire('មានបញ្ហា', data.message || 'មិនអាចបញ្ជូនបាន', 'error'); }
+                    } catch(e) { Swal.fire('បរាជ័យ', 'មិនអាចតភ្ជាប់ទៅកាន់ Server បានទេ។', 'error'); }
                     btn.innerHTML = originalText; btn.disabled = false;
                 }
             });
@@ -189,17 +238,13 @@ module.exports = async function (req, res) {
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
+  if (req.method === 'OPTIONS') return res.status(200).end();
 
-  // ១. បើលោកគ្រូចុចបើក Link វានឹងបង្ហាញផ្ទាំង HTML
   if (req.method === 'GET') {
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     return res.status(200).send(ADMIN_HTML);
   }
 
-  // ២. បើលោកគ្រូចុចប៊ូតុង "ផ្ញើ" ពីក្នុង HTML វានឹងដំណើរការកូដបាញ់សារនេះ
   if (req.method === 'POST') {
     try {
       const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
@@ -208,18 +253,30 @@ module.exports = async function (req, res) {
       const telegramUsers = await getAllTelegramIds();
       if (telegramUsers.length === 0) return res.status(200).json({ success: false, message: "មិនទាន់មានគណនីអ្នកប្រើប្រាស់ក្នុងប្រព័ន្ធទេ" });
 
-      let successCount = 0;
-
       if (action === "broadcast_message") {
-        const finalMessage = `📢 <b>សេចក្ដីជូនដំណឹងពីសាលារៀន៖</b>\n\n${body.messageText}`;
-        const promises = telegramUsers.map(chatId => sendMessage(chatId, finalMessage));
+        const { messageText, fileData, btnText, btnUrl } = body;
+        
+        let finalMessage = "";
+        if (messageText) {
+            finalMessage = `📢 <b>សេចក្ដីជូនដំណឹងពីសាលារៀន៖</b>\n\n${messageText}`;
+        } else {
+            finalMessage = `📢 <b>សេចក្ដីជូនដំណឹងពីសាលារៀន៖</b>`; // បើផ្ញើតែរូប គ្មានអក្សរ
+        }
+
+        // រៀបចំប៊ូតុង Link បើមាន
+        let replyMarkup = null;
+        if (btnText && btnUrl) {
+            replyMarkup = { inline_keyboard: [[{ text: btnText, url: btnUrl }]] };
+        }
+
+        const promises = telegramUsers.map(chatId => sendTelegramMessage(chatId, finalMessage, fileData, replyMarkup));
         const results = await Promise.all(promises);
         return res.status(200).json({ success: true, count: results.filter(Boolean).length });
       }
 
       if (action === "broadcast_score") {
         const finalMessage = `🔔 <b>ជូនដំណឹងពិន្ទុថ្មីចេញហើយ!</b>\n\nសាលារៀនបានបញ្ចេញលទ្ធផលសិក្សាប្រចាំ <b>ខែ${body.month}</b> ឆ្នាំសិក្សា <b>${body.year}</b> រួចរាល់ហើយ។\n\n👉 សូមចុចប៊ូតុង <b>📊 មើលលទ្ធផលសិក្សា</b> នៅលើ Keyboard ដើម្បីពិនិត្យមើលពិន្ទុ។`;
-        const promises = telegramUsers.map(chatId => sendMessage(chatId, finalMessage));
+        const promises = telegramUsers.map(chatId => sendTelegramMessage(chatId, finalMessage, null, null));
         const results = await Promise.all(promises);
         return res.status(200).json({ success: true, count: results.filter(Boolean).length });
       }
@@ -227,6 +284,7 @@ module.exports = async function (req, res) {
       return res.status(400).json({ success: false, message: "ការបញ្ជាមិនត្រឹមត្រូវ" });
 
     } catch (error) {
+      console.error(error);
       return res.status(500).json({ success: false, message: "មានបញ្ហានៅលើ Server" });
     }
   }
@@ -248,13 +306,50 @@ async function getAllTelegramIds() {
   } catch (error) { return []; }
 }
 
-async function sendMessage(chatId, text) {
+// អនុគមន៍ថ្មីសម្រាប់ផ្ញើសារ (មានរូប/ឯកសារ និង ប៊ូតុង)
+async function sendTelegramMessage(chatId, text, fileData, replyMarkup) {
   try { 
-    const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, { 
-      method: "POST", headers: { "Content-Type": "application/json" }, 
-      body: JSON.stringify({ chat_id: chatId, text: text, parse_mode: "HTML", disable_web_page_preview: true }) 
-    }); 
-    const result = await res.json();
-    return result.ok;
+    let endpoint = 'sendMessage';
+    
+    // ១. បើមានភ្ជាប់ File (រូបភាព ឬ PDF)
+    if (fileData && fileData.base64) {
+        const isPhoto = fileData.mime.startsWith('image/');
+        endpoint = isPhoto ? 'sendPhoto' : 'sendDocument';
+        
+        // បង្កើតទម្រង់ FormData ដើម្បីបាញ់ File ទៅ Telegram
+        const form = new FormData();
+        form.append('chat_id', chatId);
+        form.append('caption', text);
+        form.append('parse_mode', 'HTML');
+        if (replyMarkup) form.append('reply_markup', JSON.stringify(replyMarkup));
+        
+        // បម្លែង Base64 ទៅជា Blob File វិញ
+        const buffer = Buffer.from(fileData.base64, 'base64');
+        const blob = new Blob([buffer], { type: fileData.mime });
+        form.append(isPhoto ? 'photo' : 'document', blob, fileData.name);
+        
+        const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/${endpoint}`, {
+            method: "POST",
+            body: form
+        });
+        return res.ok;
+    } 
+    // ២. បើអត់មានភ្ជាប់ File (ផ្ញើអក្សរធម្មតា)
+    else {
+        const payload = { 
+            chat_id: chatId, 
+            text: text, 
+            parse_mode: "HTML", 
+            disable_web_page_preview: true 
+        };
+        if (replyMarkup) payload.reply_markup = replyMarkup;
+
+        const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/${endpoint}`, { 
+            method: "POST", 
+            headers: { "Content-Type": "application/json" }, 
+            body: JSON.stringify(payload) 
+        }); 
+        return res.ok;
+    }
   } catch (err) { return false; }
 }
