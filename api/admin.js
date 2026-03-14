@@ -343,7 +343,7 @@ async function handleCallbackQuery(chatId, actionData) {
         const data = await res.json() ||[];
         
         // 🌟 ចាក់សោរ Filter យកតែខែត្រឹមត្រូវ ទប់ស្កាត់ Garbage Data (ដូចជា telegram_db)
-        const validMonths =["វិច្ឆិកា", "ធ្នូ", "មករា", "កុម្ភៈ", "មីនា", "មេសា", "ឧសភា", "មិថុនា", "កក្កដា", "សីហា", "កញ្ញា", "តុលា"];
+        const validMonths =["វិច្ឆិកា", "ធ្នូ", "មករា", "កុម្ភៈ", "មីនា", "មេសា", "ឧសភា", "មិថុនា", "កក្កដា", "សីហា", "កញ្ញា", "តុលា","ប្រឡងឆមាសទី១","ប្រឡងឆមាសទី២"];
         const months = [...new Set(data.map(r => r.month_name))].filter(m => m && validMonths.includes(m.trim()));
         
         if (months.length === 0) return sendTelegramMessage(chatId, `📌 មិនទាន់មានពិន្ទុខែសម្រាប់ឆ្នាំសិក្សា ${DEFAULT_ACADEMIC_YEAR} ទេ។`);
@@ -363,7 +363,7 @@ async function handleCallbackQuery(chatId, actionData) {
         const data = await res.json() ||[];
         
         // 🌟 ចាក់សោរ Filter យកតែឆមាសត្រឹមត្រូវ
-        const validSems =["ប្រឡងឆមាសទី១", "ប្រចាំឆមាសទី១", "លទ្ធផលប្រចាំឆមាសទី១", "ប្រឡងឆមាសទី២", "ប្រចាំឆមាសទី២"];
+        const validSems =["ប្រឡងឆមាសទី១", "ប្រចាំឆមាសទី១", "លទ្ធផលប្រចាំឆមាសទី១", "ប្រឡងឆមាសទី២", "ប្រចាំឆមាសទី២","លទ្ធផលប្រចាំឆមាសទី២"];
         const sems =[...new Set(data.map(r => r.semester_name))].filter(s => s && validSems.includes(s.trim()));
         
         if (sems.length === 0) return sendTelegramMessage(chatId, `📌 មិនទាន់មានពិន្ទុឆមាសសម្រាប់ឆ្នាំសិក្សា ${DEFAULT_ACADEMIC_YEAR} ទេ។`);
