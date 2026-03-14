@@ -1,13 +1,12 @@
 // api/webhook.js
 
-const BOT_TOKEN = "8698376263:AAFZrgpSJ81LeiyBCDK6K_OKN2ZvwCqyzbg"; 
+const BOT_TOKEN = "8698376263:AAFZrgpSJ81LeiyBCDK6K_OKN2ZvwCqyzbg"; // ដាក់ Token របស់លោកគ្រូ
 const ADMIN_GROUP_ID = "-1003828714540"; 
 const SUPABASE_URL = "https://bcezphbxnimyhtylkvrx.supabase.co";
 const SUPABASE_SERVICE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJjZXpwaGJ4bmlteWh0eWxrdnJ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4OTA2ODYsImV4cCI6MjA4ODQ2NjY4Nn0.lFzwMvdmyRXfWq1ZbJVoM6EwkLeJXXuoVGoHGjukRQc";
 
 const DEFAULT_ACADEMIC_YEAR = "2025-2026";
 
-// បកប្រែមុខវិជ្ជា និងចំណុចផ្សេងៗ
 const TRANSLATIONS = {
   "khmer": "ភាសាខ្មែរ", "math": "គណិតវិទ្យា", "mathematics": "គណិតវិទ្យា",
   "physics": "រូបវិទ្យា", "chemistry": "គីមីវិទ្យា", "biology": "ជីវវិទ្យា",
@@ -16,12 +15,7 @@ const TRANSLATIONS = {
   "english": "ភាសាអង់គ្លេស", "french": "ភាសាបារាំង", "sport": "អប់រំកាយ",
   "pe": "អប់រំកាយ", "ict": "ព័ត៌មានវិទ្យា", "computer": "កុំព្យូទ័រ",
   "technology": "បច្ចេកវិទ្យា", "health": "សុខភាព", "art": "សិល្បៈ", "agriculture": "កសិកម្ម",
-  "skill": "បំណិន",
-  
-  "total_score": "ពិន្ទុសរុប", "school_rank": "ចំណាត់ថ្នាក់សាលា",
-  "exam_total_score": "ពិន្ទុប្រឡងសរុប", "exam_average": "មធ្យមភាគប្រឡង", 
-  "exam_rank": "ចំណាត់ថ្នាក់ប្រឡង", "monthly_average": "មធ្យមភាគប្រចាំខែ", 
-  "semester_average": "មធ្យមភាគឆមាស"
+  "skill": "បំណិន"
 };
 
 const EXCLUDE_COLUMNS =[
@@ -42,7 +36,7 @@ export default async function handler(req, res) {
         try {
             const update = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
             
-            // 🌟 មុខងារ Broadcast ពិន្ទុសរុប បញ្ជាពី Admin Panel
+            // ប្រសិនបើជាការបញ្ជា Broadcast ពិន្ទុពី System
             if (update.action === 'broadcast_score') {
                 await handleBroadcastAllScores(update.month, update.year);
                 return res.status(200).json({ success: true });
@@ -73,7 +67,6 @@ async function handleMessage(message) {
     const text = message.text;
     const isGroup = message.chat.type === 'group' || message.chat.type === 'supergroup';
 
-    // សម្រាប់ Admin នៅក្នុង Group ឆ្លើយតបទៅសិស្សវិញ
     if (isGroup && String(chatId) === ADMIN_GROUP_ID) {
         if (message.reply_to_message && message.reply_to_message.from.id.toString() === BOT_TOKEN.split(':')[0]) {
             const botText = message.reply_to_message.text || "";
@@ -97,11 +90,11 @@ async function handleMessage(message) {
         return;
     }
 
-    // 🌟 ការចាប់យក Payload ពីការចុច Link Web ដើម្បី Update ចូល Supabase (telegram_db)
+    // 🌟 ការភ្ជាប់ Telegram ពី Link
     if (text.startsWith('/start')) {
         const parts = text.split(' ');
         if (parts.length > 1) {
-            const payload = parts[1].split('_'); // ឧទាហរណ៍ parent_12345
+            const payload = parts[1].split('_'); 
             if (payload.length === 2) {
                 const role = payload[0];
                 const studentId = payload[1];
@@ -113,13 +106,12 @@ async function handleMessage(message) {
         }
         await sendMessage(chatId, "សួស្ដី! សូមស្វាគមន៍មកកាន់ប្រព័ន្ធតេឡេក្រាមរបស់សាលា។\nសូមជ្រើសរើសម៉ឺនុយខាងក្រោម៖", getMainKeyboard());
     } 
-    // 🌟 បង្ហាញជម្រើសខែ ពេលចុចមើលលទ្ធផលសិក្សា
     else if (text === '📊 មើលលទ្ធផលសិក្សា') {
         const linkedIds = await getLinkedStudentIds(chatId);
         if (linkedIds.length === 0) {
             await sendMessage(chatId, "⚠️ លោកអ្នកមិនទាន់បានភ្ជាប់គណនីសិស្សទេ។ សូមចូលទៅកាន់គេហទំព័រ ដើម្បីភ្ជាប់។");
         } else if (linkedIds.length === 1) {
-            await sendScoreMenu(chatId, linkedIds[0]); // បើមានកូនម្នាក់ លោតខែយកតែម្ដង
+            await sendScoreMenu(chatId, linkedIds[0]);
         } else {
             let buttons =[];
             for(let sid of linkedIds) {
@@ -176,11 +168,11 @@ async function handleCallbackQuery(chatId, actionData) {
   else if (action === "LISTMONTHS") {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/student_scores?student_id=eq.${studentId}&academic_year=eq.${encodeURIComponent(activeYear)}&select=month_name&order=id.desc`, { headers: getHeaders() });
     const data = await res.json() || [];
-    const months = [...new Set(data.map(r => r.month_name))].filter(Boolean);
+    const months =[...new Set(data.map(r => r.month_name))].filter(Boolean);
     
     if (months.length === 0) return sendMessage(chatId, `📌 មិនទាន់មានពិន្ទុខែសម្រាប់ឆ្នាំសិក្សា <b>${activeYear}</b> ទេ។`);
     
-    let buttons = [];
+    let buttons =[];
     months.forEach(m => buttons.push([{"text": `📅 ខែ ${m}`, "callback_data": `SHOWMONTH_${studentId}_${m}`}]));
     await sendMessage(chatId, `👇 <b>សូមជ្រើសរើសខែ៖</b>`, { "inline_keyboard": buttons });
   } 
@@ -195,7 +187,7 @@ async function handleCallbackQuery(chatId, actionData) {
     
     if (sems.length === 0) return sendMessage(chatId, `📌 មិនទាន់មានពិន្ទុឆមាសសម្រាប់ឆ្នាំសិក្សា <b>${activeYear}</b> ទេ។`);
     
-    let buttons = [];
+    let buttons =[];
     sems.forEach(s => buttons.push([{"text": `🌓 ${s}`, "callback_data": `SHOWSEM_${studentId}_${s}`}]));
     await sendMessage(chatId, `👇 <b>សូមជ្រើសរើសឆមាស៖</b>`, { "inline_keyboard": buttons });
   }
@@ -224,7 +216,6 @@ async function displayScore(chatId, studentId, tableName, title, periodCol, peri
       const latestData = data[0]; 
       const actualPeriodName = periodName || 'ប្រចាំឆ្នាំ';
       
-      // ប្រើ format មុខងារ Broadcast ដើម្បីឱ្យចេញមកដូចគ្នាស្អាត
       let msgText = formatDetailedScoreMessage(latestData, actualPeriodName, activeYear);
 
       const webUrl = `https://www.kp-tralach.org/student.html?id=${studentId}&month=${encodeURIComponent(actualPeriodName)}`;
@@ -238,18 +229,16 @@ async function displayScore(chatId, studentId, tableName, title, periodCol, peri
 }
 
 // --------------------------------------------------------------------------------
-// 🌟 មុខងារ Broadcast ពិន្ទុរួមទៅគ្រប់គ្នា (Admin Feature)
+// 🌟 មុខងារ Broadcast ជូនគ្រប់គ្នា
 // --------------------------------------------------------------------------------
 async function handleBroadcastAllScores(month, year) {
     const isSemester = month.includes('ឆមាស');
     const table = isSemester ? 'semester_scores' : 'student_scores';
     const col = isSemester ? 'semester_name' : 'month_name';
 
-    // 1. Fetch គណនី Telegram ទាំងអស់
     const tgRes = await fetch(`${SUPABASE_URL}/rest/v1/telegram_db?select=student_id,telegram_parent,telegram_student`, { headers: getHeaders() });
     const tgData = await tgRes.json() ||[];
 
-    // 2. Fetch ពិន្ទុទាំងអស់សម្រាប់ខែ/ឆ្នាំនោះ (កំណត់ Limit ធំកុំឲ្យបាត់)
     const scoreRes = await fetch(`${SUPABASE_URL}/rest/v1/${table}?academic_year=eq.${encodeURIComponent(year)}&${col}=eq.${encodeURIComponent(month)}&limit=3000`, { headers: getHeaders() });
     const scoreData = await scoreRes.json() ||[];
 
@@ -266,7 +255,7 @@ async function handleBroadcastAllScores(month, year) {
             let chatIds =[];
             if (tgRecord.telegram_parent) chatIds.push(...tgRecord.telegram_parent.split(',').map(id => id.trim()).filter(Boolean));
             if (tgRecord.telegram_student) chatIds.push(...tgRecord.telegram_student.split(',').map(id => id.trim()).filter(Boolean));
-            chatIds = [...new Set(chatIds)]; // លុបស្ទួន
+            chatIds = [...new Set(chatIds)]; 
 
             if (chatIds.length > 0) {
                 const msgText = formatDetailedScoreMessage(score, month, year);
@@ -290,7 +279,7 @@ function formatDetailedScoreMessage(s, month, year) {
         "khmer", "math", "physics", "chemistry", "biology", "history", "geography", "morality", "earth_science", "english", "sport", "agriculture", "technology", "skill", "health"
     ];
 
-    let msg = `🎓 <b>លទ្ធផលសិក្សាប្រចាំ ${month}</b>\n`;
+    let msg = `🎓 <b>លទ្ធផលសិក្សា ${month}</b>\n`;
     msg += `👤 ឈ្មោះសិស្ស៖ <b>${s.student_name}</b>\n`;
     msg += `🏫 ថ្នាក់ទី៖ <b>${s.grade}</b>\n`;
     msg += `📅 ឆ្នាំសិក្សា៖ <b>${year}</b>\n`;
@@ -301,11 +290,11 @@ function formatDetailedScoreMessage(s, month, year) {
             let scoreVal = parseFloat(s[sub]);
             let gradeStr = "";
             if (!isNaN(scoreVal)) {
-                let p = (scoreVal / 50) * 100; // ឧបមាថា 50 ជាពិន្ទុពេញ
+                let p = (scoreVal / 50) * 100; 
                 gradeStr = (p>=90?'A':p>=80?'B':p>=70?'C':p>=60?'D':p>=50?'E':'F');
                 msg += `▪️ ${TRANSLATIONS[sub] || sub} ៖ <b>${scoreVal}</b> (${gradeStr})\n`;
             } else {
-                 msg += `▪️ ${TRANSLATIONS[sub] || sub} ៖ <b>${s[sub]}</b>\n`; // ករណី ABS ឬ ម.ថ
+                 msg += `▪️ ${TRANSLATIONS[sub] || sub} ៖ <b>${s[sub]}</b>\n`;
             }
         }
     });
@@ -317,8 +306,20 @@ function formatDetailedScoreMessage(s, month, year) {
     const fGrade = s.grade_result || s.final_result || '-';
 
     msg += `➖➖➖➖➖➖➖➖➖➖\n`;
-    msg += `📊 ពិន្ទុសរុប៖ <b>${total}</b>\n`;
-    msg += `📈 មធ្យមភាគ៖ <b>${average}</b>\n`;
+    
+    // បើជាប្រចាំឆមាស ត្រូវបង្ហាញ ៦ ប្រអប់ដូច Web ដែរ
+    if (month.includes('ប្រចាំឆមាស')) {
+        const examAvg = parseFloat(s.exam_average || 0).toFixed(2);
+        const monthlyAvg = parseFloat(s.monthly_average || 0).toFixed(2);
+        
+        msg += `📈 ម.ភ ប្រឡងឆមាស៖ <b>${examAvg}</b>\n`;
+        msg += `📈 ម.ភ ខែក្នុងឆមាស៖ <b>${monthlyAvg}</b>\n`;
+        msg += `🌟 មធ្យមភាគប្រចាំឆមាស៖ <b>${average}</b>\n`;
+    } else {
+        msg += `📊 ពិន្ទុសរុប៖ <b>${total}</b>\n`;
+        msg += `📈 មធ្យមភាគ៖ <b>${average}</b>\n`;
+    }
+    
     msg += `🏆 ចំណាត់ថ្នាក់ថ្នាក់៖ <b>${cRank}</b>\n`;
     msg += `🏆 ចំណាត់ថ្នាក់សាលា៖ <b>${sRank}</b>\n`;
     msg += `🏅 និទ្ទេសរួម៖ <b>${fGrade}</b>\n\n`;
@@ -340,7 +341,6 @@ async function getLinkedStudentIds(chatId) {
   return linkedIds;
 }
 
-// រក្សាទុក ID ទៅកាន់ Supabase 
 async function saveTelegramIdToSupabase(chatId, studentId, role) {
   const targetColumn = (role === "parent") ? "telegram_parent" : "telegram_student";
   const getUrl = `${SUPABASE_URL}/rest/v1/telegram_db?student_id=eq.${studentId}`;
