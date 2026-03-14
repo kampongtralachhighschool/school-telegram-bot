@@ -280,7 +280,7 @@ async function handleMessage(message) {
         return;
     }
 
-    // Command /start (From Web Link)
+    // Command /start (From Web Link) - 🌟 កែប្រែថ្មីបង្ហាញឈ្មោះ ភេទ ថ្នាក់
     if (text.startsWith('/start')) {
         const parts = text.split(' ');
         if (parts.length > 1) {
@@ -290,8 +290,21 @@ async function handleMessage(message) {
                 const studentId = payload[1];
                 await saveTelegramIdToSupabase(chatId, studentId, role);
                 
+                // ទាញយកព័ត៌មានសិស្សពី Database
+                const profile = await getStudentProfile(studentId);
+                const stuName = profile ? profile.student_name : "មិនស្គាល់ឈ្មោះ";
+                const stuGender = profile ? profile.gender : "-";
+                const stuDob = profile ? profile.dob : "-";
+                const stuGrade = profile ? profile.grade : "-";
                 const roleText = role === "parent" ? "អាណាព្យាបាល" : "សិស្ស";
-                const welcomeText = `🎉 ការភ្ជាប់គណនីទទួលបានជោគជ័យ!\nលោកអ្នកបានភ្ជាប់គណនីក្នុងនាមជា <b>${roleText}</b> សម្រាប់សិស្សឈ្មោះ <b>${studentname}</b> អត្តលេខ <b>${studentId}</b>។\n\n👇 សូមប្រើប្រាស់ប៊ូតុងខាងក្រោម៖`;
+                
+                const welcomeText = `🎉 <b>ការភ្ជាប់គណនីទទួលបានជោគជ័យ!</b>\n\n` +
+                                    `លោកអ្នកបានភ្ជាប់គណនីក្នុងនាមជា <b>${roleText}</b> សម្រាប់សិស្ស៖\n` +
+                                    `👤 ឈ្មោះ៖ <b>${stuName}</b>\n` +
+                                    `👫 ភេទ៖ <b>${stuGender}</b>\n` +
+                                    `📅 ថ្ងៃខែឆ្នាំកំណើត៖ <b>${stuDob}</b>\n` +
+                                    `🏫 ថ្នាក់ទី៖ <b>${stuGrade}</b>\n\n` +
+                                    `👇 សូមប្រើប្រាស់ប៊ូតុងខាងក្រោម៖`;
                 
                 await sendTelegramMessage(chatId, welcomeText, null, getMainKeyboard());
                 await sendScoreMenu(chatId, studentId);
