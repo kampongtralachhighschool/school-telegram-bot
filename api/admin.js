@@ -3,7 +3,6 @@ const SUPABASE_URL = "https://bcezphbxnimyhtylkvrx.supabase.co";
 const SUPABASE_SERVICE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJjZXpwaGJ4bmlteWh0eWxrdnJ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4OTA2ODYsImV4cCI6MjA4ODQ2NjY4Nn0.lFzwMvdmyRXfWq1ZbJVoM6EwkLeJXXuoVGoHGjukRQc";
 const ADMIN_GROUP_ID = "-1003828714540"; 
 
-// 🌟 ចាក់សោរឆ្នាំសិក្សាបច្ចុប្បន្ន ជៀសវាងទាញចំឆ្នាំខុសក្នុង DB
 const DEFAULT_ACADEMIC_YEAR = "២០២៥-២០២៦"; 
 
 const TRANSLATIONS = {
@@ -47,51 +46,23 @@ const ADMIN_HTML = `
             <p class="text-sm opacity-80">ផ្ទាំងគ្រប់គ្រងសម្រាប់តែអ្នកគ្រប់គ្រង (Admin) ប៉ុណ្ណោះ</p>
         </div>
 
-        <!-- Broadcast Message -->
         <div class="tg-bg rounded-xl shadow-sm p-5 border border-gray-100">
             <div class="flex items-center space-x-2 mb-4"><span class="text-xl">📢</span><h2 class="text-lg font-bold">ផ្ញើសារជូនដំណឹងទូទៅ</h2></div>
             <textarea id="broadcastText" rows="3" class="tg-input w-full rounded-lg p-3 text-sm resize-none mb-3" placeholder="វាយបញ្ចូលខ្លឹមសារនៅទីនេះ..."></textarea>
-            
             <div class="bg-blue-50 p-3 rounded-lg border border-blue-100 mb-4 space-y-3">
-                <div>
-                    <label class="text-xs font-bold text-blue-700 block mb-1">📎 ភ្ជាប់ឯកសារ (រូបភាព ឬ PDF)</label>
-                    <input type="file" id="attachFile" accept="image/*,.pdf" class="tg-input w-full rounded p-2 text-xs bg-white">
-                </div>
-                <div>
-                    <label class="text-xs font-bold text-blue-700 block mb-1">🔗 ភ្ជាប់ប៊ូតុង Link ពីក្រោមសារ (បើមាន)</label>
-                    <div class="flex space-x-2">
-                        <input type="text" id="btnText" placeholder="ឈ្មោះប៊ូតុង..." class="tg-input w-1/3 rounded p-2 text-xs">
-                        <input type="url" id="btnUrl" placeholder="https://..." class="tg-input w-2/3 rounded p-2 text-xs">
-                    </div>
-                </div>
+                <div><label class="text-xs font-bold text-blue-700 block mb-1">📎 ភ្ជាប់ឯកសារ (រូបភាព ឬ PDF)</label><input type="file" id="attachFile" accept="image/*,.pdf" class="tg-input w-full rounded p-2 text-xs bg-white"></div>
+                <div><label class="text-xs font-bold text-blue-700 block mb-1">🔗 ភ្ជាប់ប៊ូតុង Link ពីក្រោមសារ</label><div class="flex space-x-2"><input type="text" id="btnText" placeholder="ឈ្មោះប៊ូតុង..." class="tg-input w-1/3 rounded p-2 text-xs"><input type="url" id="btnUrl" placeholder="https://..." class="tg-input w-2/3 rounded p-2 text-xs"></div></div>
             </div>
-            <button id="btnBroadcastMsg" onclick="sendBroadcastMessage()" class="tg-button w-full py-3 rounded-lg font-bold text-sm shadow transition-transform active:scale-95 flex justify-center items-center">
-                បញ្ជូនសារឥឡូវនេះ
-            </button>
+            <button onclick="sendBroadcastMessage()" class="tg-button w-full py-3 rounded-lg font-bold text-sm shadow transition-transform active:scale-95">បញ្ជូនសារឥឡូវនេះ</button>
         </div>
 
-        <!-- Broadcast Score Alert -->
         <div class="tg-bg rounded-xl shadow-sm p-5 space-y-4 border border-gray-100">
             <div class="flex items-center space-x-2"><span class="text-xl">🔔</span><h2 class="text-lg font-bold">ប្រកាសលទ្ធផលសិក្សាសរុប</h2></div>
             <div class="grid grid-cols-2 gap-3">
-                <div class="space-y-1">
-                    <label class="text-xs font-bold opacity-70">ខែ ឬ ឆមាស</label>
-                    <select id="scoreMonth" class="tg-input w-full rounded-lg p-3 text-sm">
-                        <option value="វិច្ឆិកា">វិច្ឆិកា</option><option value="ធ្នូ">ធ្នូ</option>
-                        <option value="មករា">មករា</option><option value="កុម្ភៈ">កុម្ភៈ</option>
-                        <option value="មីនា">មីនា</option><option value="មេសា">មេសា</option>
-                        <option value="ប្រឡងឆមាសទី១">ប្រឡងឆមាសទី១</option>
-                        <option value="ប្រចាំឆមាសទី១">ប្រចាំឆមាសទី១</option>
-                    </select>
-                </div>
-                <div class="space-y-1">
-                    <label class="text-xs font-bold opacity-70">ឆ្នាំសិក្សា</label>
-                    <input id="scoreYear" class="tg-input w-full rounded-lg p-3 text-sm" value="២០២៥-២០២៦" readonly>
-                </div>
+                <div class="space-y-1"><label class="text-xs font-bold opacity-70">ខែ ឬ ឆមាស</label><select id="scoreMonth" class="tg-input w-full rounded-lg p-3 text-sm"><option value="វិច្ឆិកា">វិច្ឆិកា</option><option value="ធ្នូ">ធ្នូ</option><option value="មករា">មករា</option><option value="កុម្ភៈ">កុម្ភៈ</option><option value="មីនា">មីនា</option><option value="មេសា">មេសា</option><option value="ប្រឡងឆមាសទី១">ប្រឡងឆមាសទី១</option><option value="ប្រចាំឆមាសទី១">ប្រចាំឆមាសទី១</option></select></div>
+                <div class="space-y-1"><label class="text-xs font-bold opacity-70">ឆ្នាំសិក្សា</label><input id="scoreYear" class="tg-input w-full rounded-lg p-3 text-sm" value="២០២៥-២០២៦" readonly></div>
             </div>
-            <button id="btnBroadcastScore" onclick="sendScoreAlert()" class="w-full bg-green-500 hover:bg-green-600 text-white py-3 rounded-lg font-bold text-sm shadow transition-transform active:scale-95 flex justify-center items-center">
-                🚀 ទាញទិន្នន័យពី DB ហើយបាញ់ពិន្ទុ
-            </button>
+            <button onclick="sendScoreAlert()" class="w-full bg-green-500 hover:bg-green-600 text-white py-3 rounded-lg font-bold text-sm shadow transition-transform active:scale-95">🚀 ទាញទិន្នន័យពី DB ហើយបាញ់ពិន្ទុ</button>
         </div>
     </div>
 
@@ -99,37 +70,21 @@ const ADMIN_HTML = `
         const API_URL = window.location.href;
         let selectedFileData = null;
 
-        document.addEventListener("DOMContentLoaded", () => {
-            promptPassword();
-        });
+        document.addEventListener("DOMContentLoaded", () => { promptPassword(); });
 
         function promptPassword() {
             Swal.fire({
-                title: '🔒 ចូលផ្ទាំង Admin',
-                input: 'password',
-                inputPlaceholder: 'បញ្ចូលពាក្យសម្ងាត់ទីនេះ...',
-                allowOutsideClick: false, allowEscapeKey: false,
-                confirmButtonText: 'ចូលប្រើប្រាស់', confirmButtonColor: '#3b82f6',
-                inputValidator: (value) => {
-                    if (!value) return 'សូមបញ្ចូលពាក្យសម្ងាត់!';
-                    if (value !== 'H@nm@m64') return 'ពាក្យសម្ងាត់មិនត្រឹមត្រូវទេ!';
-                }
-            }).then((result) => {
-                if (result.isConfirmed) document.getElementById('mainContent').style.display = 'block';
-            });
+                title: '🔒 ចូលផ្ទាំង Admin', input: 'password', allowOutsideClick: false, allowEscapeKey: false,
+                confirmButtonText: 'ចូលប្រើប្រាស់', inputValidator: (value) => { if (value !== 'H@nm@m64') return 'ខុសពាក្យសម្ងាត់!'; }
+            }).then((result) => { if (result.isConfirmed) document.getElementById('mainContent').style.display = 'block'; });
         }
 
         document.getElementById('attachFile').addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (!file) { selectedFileData = null; return; }
-            if (file.size > 3 * 1024 * 1024) {
-                Swal.fire('ឯកសារធំពេក', 'សូមជ្រើសរើសឯកសារទំហំក្រោម 3MB', 'warning');
-                this.value = ''; selectedFileData = null; return;
-            }
+            if (file.size > 3 * 1024 * 1024) { Swal.fire('ឯកសារធំពេក', 'សូមជ្រើសរើសឯកសារទំហំក្រោម 3MB', 'warning'); this.value = ''; return; }
             const reader = new FileReader();
-            reader.onload = function(event) {
-                selectedFileData = { name: file.name, mime: file.type, base64: event.target.result.split(',')[1] };
-            };
+            reader.onload = function(event) { selectedFileData = { name: file.name, mime: file.type, base64: event.target.result.split(',')[1] }; };
             reader.readAsDataURL(file);
         });
 
@@ -140,25 +95,12 @@ const ADMIN_HTML = `
 
             if (!text && !selectedFileData) return Swal.fire({ icon: 'warning', title: 'សូមបំពេញខ្លឹមសារ' });
 
-            Swal.fire({
-                title: 'បញ្ជាក់ការផ្ញើសារ', icon: 'question', showCancelButton: true,
-                confirmButtonText: 'បាទ/ចាស ផ្ញើ', cancelButtonText: 'បោះបង់'
-            }).then(async (result) => {
+            Swal.fire({ title: 'បញ្ជាក់ការផ្ញើសារ', icon: 'question', showCancelButton: true, confirmButtonText: 'ផ្ញើ' }).then(async (result) => {
                 if (result.isConfirmed) {
-                    let btn = document.getElementById('btnBroadcastMsg');
-                    btn.innerHTML = "កំពុងបញ្ជូន... ⏳"; btn.disabled = true;
                     try {
-                        let res = await fetch(API_URL, {
-                            method: "POST", headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ action: "broadcast_message", messageText: text, fileData: selectedFileData, btnText, btnUrl })
-                        });
-                        let data = await res.json();
-                        if(data.success) {
-                            Swal.fire('ជោគជ័យ', 'សារបានបាញ់ទៅកាន់ ' + data.count + ' គណនីរួចរាល់។', 'success');
-                            document.getElementById('broadcastText').value = '';
-                        }
+                        await fetch(API_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "broadcast_message", messageText: text, fileData: selectedFileData, btnText, btnUrl }) });
+                        Swal.fire('ជោគជ័យ', 'សារបានបាញ់រួចរាល់', 'success');
                     } catch(e) { Swal.fire('បរាជ័យ', 'មិនអាចភ្ជាប់ទៅកាន់ Server', 'error'); }
-                    btn.innerHTML = "បញ្ជូនសារឥឡូវនេះ"; btn.disabled = false;
                 }
             });
         }
@@ -167,23 +109,14 @@ const ADMIN_HTML = `
             let month = document.getElementById('scoreMonth').value;
             let year = document.getElementById('scoreYear').value;
 
-            Swal.fire({
-                title: 'ប្រកាសដំណឹងពិន្ទុ?', html: 'តើចង់បាញ់លទ្ធផលសិក្សាប្រចាំ <b>ខែ' + month + '</b> មែនទេ?', icon: 'warning',
-                showCancelButton: true, confirmButtonColor: '#10b981', confirmButtonText: '🚀 បាញ់ឥឡូវនេះ'
-            }).then(async (result) => {
+            Swal.fire({ title: 'ប្រកាសដំណឹងពិន្ទុ?', icon: 'warning', showCancelButton: true, confirmButtonText: '🚀 បាញ់ឥឡូវនេះ' }).then(async (result) => {
                 if (result.isConfirmed) {
-                    let btn = document.getElementById('btnBroadcastScore');
-                    btn.innerHTML = "កំពុងបញ្ជូន... ⏳"; btn.disabled = true;
                     try {
-                        let res = await fetch(API_URL, {
-                            method: "POST", headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ action: "broadcast_score", month: month, year: year })
-                        });
+                        let res = await fetch(API_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "broadcast_score", month: month, year: year }) });
                         let data = await res.json();
                         if(data.success) { Swal.fire('ជោគជ័យ', 'ពិន្ទុត្រូវបានបាញ់ទៅកាន់ ' + data.count + ' គណនីរួចរាល់។', 'success'); } 
                         else { Swal.fire('មានបញ្ហា', data.message, 'error'); }
-                    } catch(e) { Swal.fire('បរាជ័យ', 'បញ្ហា Server Timeout', 'error'); }
-                    btn.innerHTML = "🚀 ទាញទិន្នន័យពី DB ហើយបាញ់ពិន្ទុ"; btn.disabled = false;
+                    } catch(e) { Swal.fire('បរាជ័យ', 'បញ្ហា Server', 'error'); }
                 }
             });
         }
@@ -193,7 +126,7 @@ const ADMIN_HTML = `
 `;
 
 // ==========================================
-// 2. Vercel API Handler (Main Entry Point)
+// 2. Vercel API Handler
 // ==========================================
 export default async function handler(req, res) {
     if (req.method === 'GET') {
@@ -205,7 +138,7 @@ export default async function handler(req, res) {
         try {
             const update = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
 
-            // 🌟 ក. ទទួល Request ពី Admin UI
+            // 🌟 ទទួល Request ពី Admin UI
             if (update.action) {
                 const telegramUsers = await getAllTelegramUsers();
                 if (telegramUsers.length === 0) return res.status(200).json({ success: false, message: "គ្មានអ្នកភ្ជាប់គណនីទេ" });
@@ -215,7 +148,7 @@ export default async function handler(req, res) {
                     let finalMessage = messageText ? `📢 <b>សេចក្ដីជូនដំណឹងពីសាលារៀន៖</b>\n\n${messageText}` : `📢 <b>សេចក្ដីជូនដំណឹងពីសាលារៀន</b>`;
                     let replyMarkup = (btnText && btnUrl) ? { inline_keyboard: [[{ text: btnText, url: btnUrl }]] } : null;
 
-                    const uniqueChatIds = [...new Set(telegramUsers.map(u => u.chatId))];
+                    const uniqueChatIds =[...new Set(telegramUsers.map(u => u.chatId))];
                     const promises = uniqueChatIds.map(chatId => sendTelegramMessage(chatId, finalMessage, fileData, replyMarkup));
                     await Promise.all(promises);
                     return res.status(200).json({ success: true, count: uniqueChatIds.length });
@@ -235,7 +168,7 @@ export default async function handler(req, res) {
                 }
             }
 
-            // 🌟 ខ. ទទួល Webhook ពី Telegram
+            // 🌟 ទទួល Webhook ពី Telegram
             if (update.message) {
                 await handleMessage(update.message);
             } else if (update.callback_query) {
@@ -243,7 +176,6 @@ export default async function handler(req, res) {
             }
             
             return res.status(200).send('OK');
-
         } catch (error) {
             console.error("🔥 Server Error:", error);
             return res.status(500).send('Error');
@@ -260,7 +192,6 @@ async function handleMessage(message) {
     const text = message.text || "";
     const isGroup = message.chat.type === 'group' || message.chat.type === 'supergroup';
 
-    // Admin Group Reply
     if (isGroup && String(chatId) === ADMIN_GROUP_ID) {
         if (message.reply_to_message && message.reply_to_message.from.id.toString() === BOT_TOKEN.split(':')[0]) {
             const match = (message.reply_to_message.text || "").match(/ID:\s*(\d+)/); 
@@ -271,7 +202,6 @@ async function handleMessage(message) {
 
     if (!text || isGroup) return;
 
-    // User Replying to Report
     if (message.reply_to_message && message.reply_to_message.text && message.reply_to_message.text.includes('សរសេរសាររាយការណ៍')) {
         const userName = message.from.first_name || "សិស្ស/អាណាព្យាបាល";
         const forwardText = `📩 <b>មានសាររាយការណ៍ថ្មី</b>\n👤 ឈ្មោះ: ${userName}\n🆔 ID: ${chatId}\n\n📝 <b>ខ្លឹមសារ៖</b>\n${text}\n\n<i>(📌 លោកគ្រូអ្នកគ្រូ សូមចុច Reply លើសារនេះ)</i>`;
@@ -280,7 +210,7 @@ async function handleMessage(message) {
         return;
     }
 
-    // Command /start (From Web Link) - 🌟 កែប្រែថ្មីបង្ហាញឈ្មោះ ភេទ ថ្នាក់
+    // 🌟 Command /start (ប្តូរឲ្យចេញឈ្មោះ ភេទ ថ្នាក់ កុំឲ្យចេញអត្តលេខ)
     if (text.startsWith('/start')) {
         const parts = text.split(' ');
         if (parts.length > 1) {
@@ -290,43 +220,42 @@ async function handleMessage(message) {
                 const studentId = payload[1];
                 await saveTelegramIdToSupabase(chatId, studentId, role);
                 
-                // ទាញយកព័ត៌មានសិស្សពី Database
+                // ទាញយកព័ត៌មានពិតប្រាកដរបស់សិស្ស
                 const profile = await getStudentProfile(studentId);
-                const stuName = profile ? profile.student_name : "មិនស្គាល់ឈ្មោះ";
-                const stuGender = profile ? profile.gender : "-";
-                const stuDob = profile ? profile.dob : "-";
-                const stuGrade = profile ? profile.grade : "-";
+                const stuName = profile ? (profile.student_name || "មិនស្គាល់ឈ្មោះ") : "មិនស្គាល់ឈ្មោះ";
+                const stuGender = profile ? (profile.gender || "-") : "-";
+                const stuDob = profile ? (profile.dob || "-") : "-";
+                const stuGrade = profile ? (profile.grade || "-") : "-";
                 const roleText = role === "parent" ? "អាណាព្យាបាល" : "សិស្ស";
                 
                 const welcomeText = `🎉 <b>ការភ្ជាប់គណនីទទួលបានជោគជ័យ!</b>\n\n` +
-                                    `លោកអ្នកបានភ្ជាប់គណនីក្នុងនាមជា <b>${roleText}</b> សម្រាប់សិស្ស៖\n` +
+                                    `លោកអ្នកបានភ្ជាប់ជា <b>${roleText}</b> សម្រាប់សិស្ស៖\n` +
                                     `👤 ឈ្មោះ៖ <b>${stuName}</b>\n` +
                                     `👫 ភេទ៖ <b>${stuGender}</b>\n` +
                                     `📅 ថ្ងៃខែឆ្នាំកំណើត៖ <b>${stuDob}</b>\n` +
                                     `🏫 ថ្នាក់ទី៖ <b>${stuGrade}</b>\n\n` +
-                                    `👇 សូមប្រើប្រាស់ប៊ូតុងខាងក្រោម៖`;
+                                    `👇 សូមប្រើប្រាស់ប៊ូតុងម៉ឺនុយខាងក្រោម៖`;
                 
                 await sendTelegramMessage(chatId, welcomeText, null, getMainKeyboard());
-                await sendScoreMenu(chatId, studentId);
+                await sendScoreMenu(chatId, studentId, stuName);
                 return;
             }
         }
         await sendTelegramMessage(chatId, "សូមស្វាគមន៍មកកាន់ប្រព័ន្ធវិទ្យាល័យ ហ៊ុន សែន កំពង់ត្រឡាច។", null, getMainKeyboard());
     } 
-    // Button Clicks via Text
     else if (text === '📊 មើលលទ្ធផលសិក្សា') {
         const linkedIds = await getLinkedStudentIds(chatId);
         if (linkedIds.length === 0) {
             await sendTelegramMessage(chatId, "⚠️ លោកអ្នកមិនទាន់បានភ្ជាប់គណនីសិស្សទេ។ សូមចូលទៅកាន់គេហទំព័រ ដើម្បីភ្ជាប់។");
         } else if (linkedIds.length === 1) {
-            await sendScoreMenu(chatId, linkedIds[0]);
+            const profile = await getStudentProfile(linkedIds[0]);
+            await sendScoreMenu(chatId, linkedIds[0], profile ? profile.student_name : "សិស្សនេះ");
         } else {
             let buttons =[];
             for (let sid of linkedIds) {
-                const nameRes = await fetch(`${SUPABASE_URL}/rest/v1/student_scores?student_id=eq.${sid}&limit=1`, { headers: getHeaders() });
-                const nameData = await nameRes.json();
-                const name = (nameData && nameData.length > 0) ? nameData[0].student_name : sid;
-                buttons.push([{"text": `👤 ${name} (${sid})`, "callback_data": `SELECTSTU_${sid}`}]);
+                const profile = await getStudentProfile(sid);
+                const name = profile ? profile.student_name : sid;
+                buttons.push([{"text": `👤 ព័ត៌មានសិស្ស (${name})`, "callback_data": `SELECTSTU_${sid}`}]);
             }
             await sendTelegramMessage(chatId, "👥 លោកអ្នកមានសិស្សភ្ជាប់ច្រើននាក់ សូមជ្រើសរើស៖", null, { inline_keyboard: buttons });
         }
@@ -349,15 +278,15 @@ async function handleCallbackQuery(chatId, actionData) {
     const studentId = parts[1];
   
     if (action === "SELECTSTU") {
-        await sendScoreMenu(chatId, studentId);
+        const profile = await getStudentProfile(studentId);
+        await sendScoreMenu(chatId, studentId, profile ? profile.student_name : "សិស្សនេះ");
     }
     else if (action === "LISTMONTHS") {
         const res = await fetch(`${SUPABASE_URL}/rest/v1/student_scores?student_id=eq.${studentId}&academic_year=eq.${encodeURIComponent(DEFAULT_ACADEMIC_YEAR)}&select=month_name&order=id.desc`, { headers: getHeaders() });
         const data = await res.json() ||[];
         
-        // 🌟 ចាក់សោរ Filter យកតែខែត្រឹមត្រូវ ទប់ស្កាត់ Garbage Data (ដូចជា telegram_db)
-        const validMonths =["វិច្ឆិកា", "ធ្នូ", "មករា", "កុម្ភៈ", "មីនា", "មេសា", "ឧសភា", "មិថុនា", "កក្កដា", "សីហា", "កញ្ញា", "តុលា","ប្រឡងឆមាសទី១","ប្រឡងឆមាសទី២"];
-        const months = [...new Set(data.map(r => r.month_name))].filter(m => m && validMonths.includes(m.trim()));
+        const validMonths =["វិច្ឆិកា", "ធ្នូ", "មករា", "កុម្ភៈ", "មីនា", "មេសា", "ឧសភា", "មិថុនា", "កក្កដា", "សីហា", "កញ្ញា", "តុលា"];
+        const months =[...new Set(data.map(r => r.month_name))].filter(m => m && validMonths.includes(m.trim()));
         
         if (months.length === 0) return sendTelegramMessage(chatId, `📌 មិនទាន់មានពិន្ទុខែសម្រាប់ឆ្នាំសិក្សា ${DEFAULT_ACADEMIC_YEAR} ទេ។`);
         
@@ -375,8 +304,7 @@ async function handleCallbackQuery(chatId, actionData) {
         const res = await fetch(`${SUPABASE_URL}/rest/v1/semester_scores?student_id=eq.${studentId}&academic_year=eq.${encodeURIComponent(DEFAULT_ACADEMIC_YEAR)}&select=semester_name&order=id.desc`, { headers: getHeaders() });
         const data = await res.json() ||[];
         
-        // 🌟 ចាក់សោរ Filter យកតែឆមាសត្រឹមត្រូវ
-        const validSems =["ប្រឡងឆមាសទី១", "ប្រចាំឆមាសទី១", "លទ្ធផលប្រចាំឆមាសទី១", "ប្រឡងឆមាសទី២", "ប្រចាំឆមាសទី២","លទ្ធផលប្រចាំឆមាសទី២"];
+        const validSems =["ប្រឡងឆមាសទី១", "ប្រចាំឆមាសទី១", "លទ្ធផលប្រចាំឆមាសទី១", "ប្រឡងឆមាសទី២", "ប្រចាំឆមាសទី២"];
         const sems =[...new Set(data.map(r => r.semester_name))].filter(s => s && validSems.includes(s.trim()));
         
         if (sems.length === 0) return sendTelegramMessage(chatId, `📌 មិនទាន់មានពិន្ទុឆមាសសម្រាប់ឆ្នាំសិក្សា ${DEFAULT_ACADEMIC_YEAR} ទេ។`);
@@ -393,11 +321,11 @@ async function handleCallbackQuery(chatId, actionData) {
     }
 }
 
-async function sendScoreMenu(chatId, studentId) {
+async function sendScoreMenu(chatId, studentId, stuName) {
     const inlineKeyboard = {
       "inline_keyboard": [[{"text": "📅 ប្រចាំខែ", "callback_data": `LISTMONTHS_${studentId}`}, {"text": "🌓 ប្រចាំឆមាស", "callback_data": `LISTSEMS_${studentId}`}]]
     };
-    await sendTelegramMessage(chatId, `🎯 <b>សូមជ្រើសរើសប្រភេទពិន្ទុ (អត្តលេខ៖ ${studentId})</b>`, null, inlineKeyboard);
+    await sendTelegramMessage(chatId, `🎯 <b>សូមជ្រើសរើសប្រភេទពិន្ទុសម្រាប់៖ ${stuName}</b>`, null, inlineKeyboard);
 }
 
 // --------------------------------------------------------------------------------
@@ -406,6 +334,15 @@ async function sendScoreMenu(chatId, studentId) {
 
 function getHeaders() {
     return { "apikey": SUPABASE_SERVICE_KEY, "Authorization": `Bearer ${SUPABASE_SERVICE_KEY}`, "Content-Type": "application/json" };
+}
+
+async function getStudentProfile(studentId) {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/student_scores?student_id=eq.${studentId}&order=id.desc&limit=1`, { headers: getHeaders() });
+    const data = await res.json();
+    if (data && data.length > 0) return data[0];
+  } catch (err) {}
+  return null;
 }
 
 async function getAllTelegramUsers() {
@@ -517,7 +454,8 @@ async function buildScoreMessage(studentId, periodName, academicYear, table = nu
 function getMainKeyboard() {
     return { 
       keyboard: [[{"text": "📊 មើលលទ្ធផលសិក្សា"}],[{"text": "🔗 បណ្ដាញទំនាក់ទំនង និង ឯកសារ"}],[{"text": "📩 រាយការណ៍ ឬប្ដឹងតវ៉ា"}]], 
-      resize_keyboard: true, persistent: true 
+      resize_keyboard: true, 
+      is_persistent: true // 🌟 ការពារ Error API 400 Bad Request
     };
 }
 
@@ -539,8 +477,8 @@ async function sendTelegramMessage(chatId, text, fileData = null, replyMarkup = 
           const blob = new Blob([buffer], { type: fileData.mime });
           form.append(isPhoto ? 'photo' : 'document', blob, fileData.name);
           
-          const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/${endpoint}`, { method: "POST", body: form });
-          return res.ok;
+          await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/${endpoint}`, { method: "POST", body: form });
+          return true;
       } 
       else {
           const payload = { chat_id: chatId, text: text, parse_mode: "HTML", disable_web_page_preview: true };
@@ -549,6 +487,8 @@ async function sendTelegramMessage(chatId, text, fileData = null, replyMarkup = 
           const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/${endpoint}`, { 
               method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) 
           }); 
+          
+          if (!res.ok) console.error("Telegram Error:", await res.text());
           return res.ok;
       }
     } catch (err) { return false; }
