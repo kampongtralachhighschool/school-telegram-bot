@@ -39,7 +39,7 @@ const ADMIN_HTML = `
                 <div>
                     <label class="text-xs font-bold text-blue-700 block mb-1">📎 ភ្ជាប់ឯកសារ (រូបភាព ឬ PDF)</label>
                     <input type="file" id="attachFile" accept="image/*,.pdf" class="tg-input w-full rounded p-2 text-xs bg-white">
-                    <p class="text-[10px] text-gray-500 mt-1">* ទំហំឯកសារមិនត្រូវលើសពី 4MB ទេ</p>
+                    <p class="text-[10px] text-gray-500 mt-1">* ទំហំឯកសារមិនត្រូវលើសពី 3MB ទេ (ការពារ Server គាំង)</p>
                 </div>
                 <div>
                     <label class="text-xs font-bold text-blue-700 block mb-1">🔗 ភ្ជាប់ប៊ូតុង Link ពីក្រោមសារ (បើមាន)</label>
@@ -137,9 +137,9 @@ const ADMIN_HTML = `
             const file = e.target.files[0];
             if (!file) { selectedFileData = null; return; }
             
-            // កំណត់ទំហំ File ត្រឹម 4MB ដើម្បីកុំឱ្យ Vercel លោត Error 500
-            if (file.size > 4 * 1024 * 1024) {
-                Swal.fire('ឯកសារធំពេក', 'សូមជ្រើសរើសឯកសារទំហំក្រោម 4MB', 'warning');
+            // កំណត់ទំហំ File ត្រឹម 3MB ដើម្បីកុំឱ្យ Vercel លោត Error 500
+            if (file.size > 3 * 1024 * 1024) {
+                Swal.fire('ឯកសារធំពេក', 'សូមជ្រើសរើសឯកសារទំហំក្រោម 3MB', 'warning');
                 this.value = ''; selectedFileData = null; return;
             }
 
@@ -233,7 +233,8 @@ const ADMIN_HTML = `
 </html>
 `;
 
-module.exports = async function (req, res) {
+// ដោះស្រាយបញ្ហា Error 500 ដោយប្តូរមកប្រើ export default (ដែលត្រូវនឹងប្រព័ន្ធ Vercel ថ្មី)
+export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -260,10 +261,9 @@ module.exports = async function (req, res) {
         if (messageText) {
             finalMessage = `📢 <b>សេចក្ដីជូនដំណឹងពីសាលារៀន៖</b>\n\n${messageText}`;
         } else {
-            finalMessage = `📢 <b>សេចក្ដីជូនដំណឹងពីសាលារៀន៖</b>`; // បើផ្ញើតែរូប គ្មានអក្សរ
+            finalMessage = `📢 <b>សេចក្ដីជូនដំណឹងពីសាលារៀន៖</b>`; 
         }
 
-        // រៀបចំប៊ូតុង Link បើមាន
         let replyMarkup = null;
         if (btnText && btnUrl) {
             replyMarkup = { inline_keyboard: [[{ text: btnText, url: btnUrl }]] };
@@ -275,7 +275,7 @@ module.exports = async function (req, res) {
       }
 
       if (action === "broadcast_score") {
-        const finalMessage = `🔔 <b>ជូនដំណឹងពិន្ទុថ្មីចេញហើយ!</b>\n\nសាលារៀនបានបញ្ចេញលទ្ធផលសិក្សាប្រចាំ <b>ខែ${body.month}</b> ឆ្នាំសិក្សា <b>${body.year}</b> រួចរាល់ហើយ។\n\n👉 សូមចុចប៊ូតុង <b>📊 មើលលទ្ធផលសិក្សា</b> នៅលើ Keyboard ដើម្បីពិនិត្យមើលពិន្ទុ។`;
+        const finalMessage = `🔔 <b>ជូនដំណឹងពិន្ទុថ្មីចេញហើយ!</b>\n\nសាលារៀនបានបញ្ចេញលទ្ធផលសិក្សាប្រចាំ <b>ខែ${body.month}</b> ឆ្នាំសិក្សា <b>${body.year}</b> រួចរាល់ហើយ。\n\n👉 សូមចុចប៊ូតុង <b>📊 មើលលទ្ធផលសិក្សា</b> នៅលើ Keyboard ដើម្បីពិនិត្យមើលពិន្ទុ។`;
         const promises = telegramUsers.map(chatId => sendTelegramMessage(chatId, finalMessage, null, null));
         const results = await Promise.all(promises);
         return res.status(200).json({ success: true, count: results.filter(Boolean).length });
@@ -288,7 +288,7 @@ module.exports = async function (req, res) {
       return res.status(500).json({ success: false, message: "មានបញ្ហានៅលើ Server" });
     }
   }
-};
+}
 
 async function getAllTelegramIds() {
   try {
@@ -306,24 +306,21 @@ async function getAllTelegramIds() {
   } catch (error) { return []; }
 }
 
-// អនុគមន៍ថ្មីសម្រាប់ផ្ញើសារ (មានរូប/ឯកសារ និង ប៊ូតុង)
 async function sendTelegramMessage(chatId, text, fileData, replyMarkup) {
   try { 
     let endpoint = 'sendMessage';
     
-    // ១. បើមានភ្ជាប់ File (រូបភាព ឬ PDF)
     if (fileData && fileData.base64) {
         const isPhoto = fileData.mime.startsWith('image/');
         endpoint = isPhoto ? 'sendPhoto' : 'sendDocument';
         
-        // បង្កើតទម្រង់ FormData ដើម្បីបាញ់ File ទៅ Telegram
         const form = new FormData();
         form.append('chat_id', chatId);
         form.append('caption', text);
         form.append('parse_mode', 'HTML');
         if (replyMarkup) form.append('reply_markup', JSON.stringify(replyMarkup));
         
-        // បម្លែង Base64 ទៅជា Blob File វិញ
+        // បម្លែង Base64 ដើម្បីប្រើជាមួយ Vercel Fetch API
         const buffer = Buffer.from(fileData.base64, 'base64');
         const blob = new Blob([buffer], { type: fileData.mime });
         form.append(isPhoto ? 'photo' : 'document', blob, fileData.name);
@@ -334,7 +331,6 @@ async function sendTelegramMessage(chatId, text, fileData, replyMarkup) {
         });
         return res.ok;
     } 
-    // ២. បើអត់មានភ្ជាប់ File (ផ្ញើអក្សរធម្មតា)
     else {
         const payload = { 
             chat_id: chatId, 
