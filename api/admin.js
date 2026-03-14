@@ -290,20 +290,102 @@ export default async function handler(req, res) {
   }
 }
 
-async function getAllTelegramIds() {
+// ... [រក្សាកូដចាស់ៗពីលើទុកដដែល] ...
+
+      // ពេល Admin ចុចប្រកាសពិន្ទុ
+      if (action === "broadcast_score") {
+        const telegramUsers = await getAllTelegramUsers(); // ទាញយកទាំង Chat ID និង Student ID
+        if (telegramUsers.length === 0) return res.status(200).json({ success: false, message: "គ្មានអ្នកប្រើប្រាស់" });
+
+        let count = 0;
+        // ប្រើ for...of ដើម្បីឲ្យវាទាញពិន្ទុសិស្សម្នាក់ៗ រួចផ្ញើ
+        for (const user of telegramUsers) {
+            // ទាញពិន្ទុផ្ទាល់ខ្លួនរបស់សិស្សម្នាក់ៗ
+            const scoreMsg = await buildScoreMessage(user.studentId, body.month, body.year);
+            
+            if (scoreMsg) { // បើមានពិន្ទុ ទើបផ្ញើ
+                const ok = await sendTelegramMessage(user.chatId, scoreMsg, null, null);
+                if (ok) count++;
+            }
+        }
+        return res.status(200).json({ success: true, count: count });
+      }
+
+      return res.status(400).json({ success: false, message: "ការបញ្ជាមិនត្រឹមត្រូវ" });
+
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ success: false, message: "មានបញ្ហានៅលើ Server" });
+    }
+  }
+} // បិទ Function handler
+
+// ==========================================
+// Function ថ្មីៗដែលត្រូវបន្ថែមពីក្រោម Handler
+// ==========================================
+
+// ១. ទាញយកទាំង Chat ID និង Student ID ផ្គូផ្គងគ្នា
+async function getAllTelegramUsers() {
   try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/telegram_db?select=telegram_parent,telegram_student`, {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/telegram_db?select=student_id,telegram_parent,telegram_student`, {
       method: "GET",
       headers: { "apikey": SUPABASE_SERVICE_KEY, "Authorization": `Bearer ${SUPABASE_SERVICE_KEY}`, "Content-Type": "application/json" }
     });
     const data = await res.json() || [];
-    let allIds = new Set();
+    let users =[];
+    
     data.forEach(row => {
-      if (row.telegram_parent) row.telegram_parent.split(",").forEach(id => { if (id.trim()) allIds.add(id.trim()); });
-      if (row.telegram_student) row.telegram_student.split(",").forEach(id => { if (id.trim()) allIds.add(id.trim()); });
+      const stuId = row.student_id;
+      if (row.telegram_parent) {
+          row.telegram_parent.split(",").forEach(id => { if (id.trim()) users.push({ chatId: id.trim(), studentId: stuId }); });
+      }
+      if (row.telegram_student) {
+          row.telegram_student.split(",").forEach(id => { if (id.trim()) users.push({ chatId: id.trim(), studentId: stuId }); });
+      }
     });
-    return Array.from(allIds);
-  } catch (error) { return []; }
+    return users; // លទ្ធផល:[{chatId: '123', studentId: '001'}, ...]
+  } catch (error) { return[]; }
+}
+
+// ២. Function សម្រាប់ទាញយកពិន្ទុពី Supabase និងរៀបចំជាអត្ថបទ (Message)
+async function buildScoreMessage(studentId, monthName, academicYear) {
+    try {
+        const queryUrl = `${SUPABASE_URL}/rest/v1/student_scores?student_id=eq.${studentId}&academic_year=eq.${encodeURIComponent(academicYear)}&month_name=eq.${encodeURIComponent(monthName)}&limit=1`;
+        const res = await fetch(queryUrl, {
+            headers: { "apikey": SUPABASE_SERVICE_KEY, "Authorization": `Bearer ${SUPABASE_SERVICE_KEY}` }
+        });
+        const data = await res.json();
+        
+        if (!data || data.length === 0) return null; // បើអត់មានពិន្ទុខែហ្នឹងទេ រំលង
+        
+        const scoreData = data[0];
+        let msg = `🔔 <b>លទ្ធផលសិក្សាប្រចាំ ខែ${monthName} ចេញហើយ!</b>\n`;
+        msg += `-----------------------------------\n`;
+        msg += `🎓 ឈ្មោះ៖ <b>${scoreData.student_name || '-'}</b>\n`;
+        msg += `🆔 អត្តលេខ៖ <b>${studentId}</b>\n`;
+        msg += `🏫 ថ្នាក់ទី៖ <b>${scoreData.grade || '-'}</b>\n\n`;
+        
+        msg += `📊 <b>ពិន្ទុមុខវិជ្ជា៖</b>\n`;
+        // លាក់ column ដែលមិនមែនជាមុខវិជ្ជា
+        const excludes =["id", "student_id", "student_name", "gender", "dob", "grade", "month_name", "semester_name", "class_rank", "rank", "average", "avg", "grade_result", "result", "academic_year", "total_score"];
+        
+        for (const [key, value] of Object.entries(scoreData)) {
+            if (!excludes.includes(key.toLowerCase()) && value !== null && value !== "") {
+                // ប្រែឈ្មោះអង់គ្លេសទៅខ្មែរ (លោកគ្រូអាចយក TRANSLATIONS ពី webhook មកដាក់បន្ថែមបាន)
+                msg += `🔹 ${key.toUpperCase()} : <b>${value}</b>\n`;
+            }
+        }
+        
+        msg += `-----------------------------------\n`;
+        msg += `📈 <b>សរុបលទ្ធផល៖</b>\n`;
+        msg += `• ពិន្ទុសរុប៖ <b>${scoreData.total_score || '-'}</b>\n`;
+        msg += `• មធ្យមភាគ៖ <b>${scoreData.average || scoreData.avg || '-'}</b>\n`;
+        msg += `• ចំណាត់ថ្នាក់៖ <b>${scoreData.class_rank || scoreData.rank || '-'}</b>\n`;
+        
+        return msg;
+    } catch (err) {
+        return null;
+    }
 }
 
 async function sendTelegramMessage(chatId, text, fileData, replyMarkup) {
