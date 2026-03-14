@@ -291,7 +291,7 @@ async function handleMessage(message) {
                 await saveTelegramIdToSupabase(chatId, studentId, role);
                 
                 const roleText = role === "parent" ? "អាណាព្យាបាល" : "សិស្ស";
-                const welcomeText = `🎉 ការភ្ជាប់គណនីទទួលបានជោគជ័យ!\nលោកអ្នកបានភ្ជាប់គណនីក្នុងនាមជា <b>${roleText}</b> សម្រាប់សិស្សអត្តលេខ <b>${studentId}</b>។\n\n👇 សូមប្រើប្រាស់ប៊ូតុងខាងក្រោម៖`;
+                const welcomeText = `🎉 ការភ្ជាប់គណនីទទួលបានជោគជ័យ!\nលោកអ្នកបានភ្ជាប់គណនីក្នុងនាមជា <b>${roleText}</b> សម្រាប់សិស្សឈ្មោះ <b>${studentname}</b> អត្តលេខ <b>${studentId}</b>។\n\n👇 សូមប្រើប្រាស់ប៊ូតុងខាងក្រោម៖`;
                 
                 await sendTelegramMessage(chatId, welcomeText, null, getMainKeyboard());
                 await sendScoreMenu(chatId, studentId);
