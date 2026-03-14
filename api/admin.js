@@ -243,19 +243,27 @@ async function handleMessage(message) {
         }
         await sendTelegramMessage(chatId, "សូមស្វាគមន៍មកកាន់ប្រព័ន្ធវិទ្យាល័យ ហ៊ុន សែន កំពង់ត្រឡាច។", null, getMainKeyboard());
     } 
-    else if (text === '📊 មើលលទ្ធផលសិក្សា') {
+  else if (text === '📊 មើលលទ្ធផលសិក្សា') {
         const linkedIds = await getLinkedStudentIds(chatId);
+        
         if (linkedIds.length === 0) {
             await sendTelegramMessage(chatId, "⚠️ លោកអ្នកមិនទាន់បានភ្ជាប់គណនីសិស្សទេ។ សូមចូលទៅកាន់គេហទំព័រ ដើម្បីភ្ជាប់។");
         } else if (linkedIds.length === 1) {
+            // ករណីមានសិស្សម្នាក់
             const profile = await getStudentProfile(linkedIds[0]);
-            await sendScoreMenu(chatId, linkedIds[0], profile ? profile.student_name : "សិស្សនេះ");
+            const stuName = (profile && profile.student_name && profile.student_name.trim() !== "") ? profile.student_name : linkedIds[0];
+            await sendScoreMenu(chatId, linkedIds[0], stuName);
         } else {
+            // ករណីមានសិស្សច្រើននាក់
             let buttons =[];
             for (let sid of linkedIds) {
                 const profile = await getStudentProfile(sid);
-                const name = profile ? profile.student_name : sid;
-                buttons.push([{"text": `👤 ព័ត៌មានសិស្ស (${name})`, "callback_data": `SELECTSTU_${sid}`}]);
+                
+                // 🌟 បើអត់មានឈ្មោះ វានឹងយកអត្តលេខមកបង្ហាញជំនួស កុំឲ្យចេញវង់ក្រចកទទេ
+                const name = (profile && profile.student_name && profile.student_name.trim() !== "") ? profile.student_name : "មិនស្គាល់ឈ្មោះ";
+                
+                // បង្ហាញទាំងឈ្មោះ ទាំងអត្តលេខ ងាយស្រួលចំណាំ
+                buttons.push([{"text": `👤 ${name} (${sid})`, "callback_data": `SELECTSTU_${sid}`}]);
             }
             await sendTelegramMessage(chatId, "👥 លោកអ្នកមានសិស្សភ្ជាប់ច្រើននាក់ សូមជ្រើសរើស៖", null, { inline_keyboard: buttons });
         }
@@ -285,7 +293,7 @@ async function handleCallbackQuery(chatId, actionData) {
         const res = await fetch(`${SUPABASE_URL}/rest/v1/student_scores?student_id=eq.${studentId}&academic_year=eq.${encodeURIComponent(DEFAULT_ACADEMIC_YEAR)}&select=month_name&order=id.desc`, { headers: getHeaders() });
         const data = await res.json() ||[];
         
-        const validMonths =["វិច្ឆិកា", "ធ្នូ", "មករា", "កុម្ភៈ", "មីនា", "មេសា", "ឧសភា", "មិថុនា", "កក្កដា", "សីហា", "កញ្ញា", "តុលា"];
+        const validMonths =["វិច្ឆិកា", "ធ្នូ", "មករា", "កុម្ភៈ", "មីនា", "មេសា", "ឧសភា", "មិថុនា", "កក្កដា", "សីហា", "កញ្ញា", "តុលា","ប្រឡងឆមាសទី១","ប្រឡងឆមាសទី២"];
         const months =[...new Set(data.map(r => r.month_name))].filter(m => m && validMonths.includes(m.trim()));
         
         if (months.length === 0) return sendTelegramMessage(chatId, `📌 មិនទាន់មានពិន្ទុខែសម្រាប់ឆ្នាំសិក្សា ${DEFAULT_ACADEMIC_YEAR} ទេ។`);
@@ -304,7 +312,7 @@ async function handleCallbackQuery(chatId, actionData) {
         const res = await fetch(`${SUPABASE_URL}/rest/v1/semester_scores?student_id=eq.${studentId}&academic_year=eq.${encodeURIComponent(DEFAULT_ACADEMIC_YEAR)}&select=semester_name&order=id.desc`, { headers: getHeaders() });
         const data = await res.json() ||[];
         
-        const validSems =["ប្រឡងឆមាសទី១", "ប្រចាំឆមាសទី១", "លទ្ធផលប្រចាំឆមាសទី១", "ប្រឡងឆមាសទី២", "ប្រចាំឆមាសទី២"];
+        const validSems =["ប្រឡងឆមាសទី១", "ប្រចាំឆមាសទី១", "លទ្ធផលប្រចាំឆមាសទី១", "ប្រឡងឆមាសទី២", "ប្រចាំឆមាសទី២","លទ្ធផលប្រចាំឆមាសទី២"];
         const sems =[...new Set(data.map(r => r.semester_name))].filter(s => s && validSems.includes(s.trim()));
         
         if (sems.length === 0) return sendTelegramMessage(chatId, `📌 មិនទាន់មានពិន្ទុឆមាសសម្រាប់ឆ្នាំសិក្សា ${DEFAULT_ACADEMIC_YEAR} ទេ។`);
@@ -361,14 +369,17 @@ async function getAllTelegramUsers() {
 async function getLinkedStudentIds(chatId) {
     const strId = String(chatId);
     const res = await fetch(`${SUPABASE_URL}/rest/v1/telegram_db?select=student_id,telegram_parent,telegram_student`, { headers: getHeaders() });
-    const data = await res.json() ||[];
+    const data = await res.json() || [];
+    
     let linkedIds =[];
     data.forEach(row => {
       if ((row.telegram_parent || "").includes(strId) || (row.telegram_student || "").includes(strId)) {
-          linkedIds.push(row.student_id);
+          if (row.student_id) linkedIds.push(row.student_id); // 🌟 ការពារ ID ទទេ
       }
     });
-    return linkedIds;
+    
+    // លុប ID ដែលស្ទួនគ្នា ឬទទេស្អាត
+    return [...new Set(linkedIds)].filter(id => id.trim() !== "");
 }
 
 async function saveTelegramIdToSupabase(chatId, studentId, role) {
